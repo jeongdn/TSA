@@ -8,14 +8,17 @@
 3. 예측: 계절 나이브, 12개월 평균, ETS, LightGBM(점, q10, q90), MASE 분모, 구간 규모가
    T 이후 물량·환율·유가를 바꿔도 비트 단위로 같다. LightGBM은 동결한 설정과 다른 설정 하나로 확인한다.
 4. 온라인 conformal: 목표 월이 T보다 뒤인 점수를 바꿔도 보정폭이 같다.
+5. 계층 조정(7번): 합계 노드의 ETS 기준 예측이 T 이후 값과 무관하고, W의 재료인 검증 구간 오차가
+   테스트 구간(2023-08 이후) 값을 바꿔도 같다.
 한계: 기준 시점 두 개(검증 첫 시점, 테스트 여섯 번째 시점)에서만 확인한다.
 """
 import json
+from types import SimpleNamespace
 
 import numpy as np
 import pandas as pd
 
-from tsa import backtest, baselines, config, conformal, lgbm, panel, stages
+from tsa import backtest, baselines, config, conformal, hierarchy, lgbm, panel, stages
 
 
 def poisoned(D, T):
@@ -59,6 +62,8 @@ def test_no_leakage():
         assert np.array_equal(baselines.ets(D.Y, T)[0], baselines.ets(Yp, T)[0]), "ETS"
         assert np.array_equal(backtest.mase_scale(D.Y, T), backtest.mase_scale(Yp, T))
         assert np.array_equal(backtest.origin_scale(D.Y, T), backtest.origin_scale(Yp, T))
+        S, _ = hierarchy.summing_matrix(D.products)
+        assert np.array_equal(baselines.ets((S @ D.Y)[:3], T)[0], baselines.ets((S @ Yp)[:3], T)[0]), "합계 ETS"
         for params in param_sets:
             for obj, a in [("l1", None), ("quantile", 0.1), ("quantile", 0.9)]:
                 p1, _ = lgbm.fit_predict(D.rows, T, params, feats, obj, a)
@@ -74,6 +79,19 @@ def test_no_leakage():
     cal_p = cal.copy()
     cal_p.loc[cal_p["T"] + cal_p["h"] > T, "y"] = 1e9
     assert conformal.online_thresholds(cal, T) == conformal.online_thresholds(cal_p, T)
+
+    # 5) 계층 조정: W의 재료(검증 구간 오차)는 테스트 구간 값을 바꿔도 같아야 한다
+    val_path = config.OUT_DIR / "val_forecasts.csv.gz"
+    if val_path.exists():          # val 단계를 먼저 돌린 PC에서만 확인할 수 있다
+        Yc, _ = poisoned(D, D.months.get_loc(config.CUTOFF))
+        errs = []
+        for d in (D, SimpleNamespace(**{**vars(D), "Y": Yc})):
+            HD = stages.hier(d)
+            agg, _ = stages.agg_ets(HD, D.val_idx)
+            bottom = stages.stored(val_path, "LGBM", len(D.series))
+            errs.append(stages.val_errors(stages.hier_base(HD, D.val_idx, agg, bottom)))
+        assert np.array_equal(*errs), "검증 구간 오차가 테스트 구간 값에 따라 바뀜"
+        print("  계층 조정 W의 재료: 통과")
     print("누수 테스트 통과")
 
 

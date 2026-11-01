@@ -1,0 +1,32 @@
+{
+  "created": "2026-11-02T00:04:23",
+  "hierarchy": "TOTAL -> ABS, PC -> 하위 18개",
+  "base": "하위 18개 = 동결한 LightGBM, 합계 3개 = 합계 시리즈에 직접 적합한 AutoETS",
+  "W": "검증 구간 기준 예측 오차를 h 구분 없이 모아 추정 (테스트에는 검증 구간 12개 기준 시점 전체로 추정해 고정)",
+  "nonneg": "조정 뒤 음수인 하위 예측은 0으로 자르고 다시 더한다",
+  "candidate": "MinT_shrink",
+  "default": "BU",
+  "adopted": "BU",
+  "decision_rule": "2겹 교차 적합 검증에서 P(후보가 BU보다 전체·제품·하위 세 수준 모두에서 나음) >= 0.9이면 후보, 아니면 BU. 블록 6, 10,000회, 작은 표본 보정. 테스트 결과는 판정과 관계없이 그대로 보고한다.",
+  "gate": {
+    "total": {
+      "p_better": 0.724,
+      "rel_reduction": 0.06808753041305038,
+      "rel_reduction_q05": -0.17028967657716823,
+      "rel_reduction_q95": 0.19236633737254522
+    },
+    "product": {
+      "p_better": 0.7395,
+      "rel_reduction": 0.05349915479160672,
+      "rel_reduction_q05": -0.08959835833417254,
+      "rel_reduction_q95": 0.1380277605358828
+    },
+    "bottom": {
+      "p_better": 0.0834,
+      "rel_reduction": -0.0412361481826109,
+      "rel_reduction_q05": -0.09567699675876176,
+      "rel_reduction_q95": 0.005960556793527236
+    },
+    "p_better_all": 0.0834
+  }
+}

@@ -13,6 +13,7 @@ PROCESSED_DIR = ROOT / "data" / "processed"
 OUT_DIR = ROOT / "outputs"
 CACHE_DIR = OUT_DIR / "cache"          # 진단용 대용량 예측 (커밋 안 함)
 FROZEN_PATH = ROOT / "frozen.json"     # 검증 단계에서 고정한 선택 (테스트 전에 커밋)
+FROZEN_MINT_PATH = ROOT / "frozen_mint.json"   # 7번 계층 조정 방법 선택 (테스트 전에 커밋)
 
 # ---- 데이터 ----
 REPORTER = 410                          # UN Comtrade 국가 코드: 대한민국

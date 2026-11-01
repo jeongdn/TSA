@@ -1,8 +1,10 @@
-"""검증 단계(val)와 테스트 단계(final).
+"""검증 단계(val), 테스트 단계(final), 계층 조정(mint), 마지막 달 기준 예측(forecast).
 
-val  : 검증 기준 시점 12개만 써서 LightGBM 설정, 외부 지표 사용 여부, 앙상블 가중치, 구간 보정폭을 고른다.
-       고른 것은 frozen.json에 쓴다. 이 파일을 커밋하고 'freeze' 태그를 단 뒤에 final을 돌린다.
-final: frozen.json을 읽어 테스트 기준 시점 24개를 한 번 채점한다. frozen.json이 없으면 돌지 않는다.
+val     : 검증 기준 시점 12개만 써서 LightGBM 설정, 외부 지표 사용 여부, 앙상블 가중치, 구간 보정폭을 고른다.
+          고른 것은 frozen.json에 쓴다. 이 파일을 커밋하고 'freeze' 태그를 단 뒤에 final을 돌린다.
+final   : frozen.json을 읽어 테스트 기준 시점 24개를 한 번 채점한다. frozen.json이 없으면 돌지 않는다.
+mint    : (7번) 합계가 맞도록 조정한다. W는 검증 구간 오차로만 정하고 테스트 구간에 적용한다.
+forecast: (7번) 마지막 자료 월을 기준 시점으로 앞으로 6개월을 예측한다 (질의응답 에이전트가 읽는다).
 """
 import hashlib
 import json
@@ -14,7 +16,8 @@ import pandas as pd
 from joblib import Parallel, delayed
 from scipy.stats import spearmanr
 
-from . import backtest, baselines, bootstrap, config, conformal, data_comtrade, data_fred, lgbm, metrics, panel
+from . import (backtest, baselines, bootstrap, config, conformal, data_comtrade, data_fred, hierarchy, lgbm,
+               metrics, panel)
 
 OUT = config.OUT_DIR
 MODELS = ["SNaive", "ETS", "LGBM"]                       # 앙상블에 섞는 모델
@@ -322,3 +325,200 @@ def stage_final(D):
     pd.concat(diag, ignore_index=True).to_csv(config.CACHE_DIR / "diag_configs_test.csv.gz", index=False)
     _json(R, OUT / "results.json")
     return R
+
+
+# ---------------------------------------------------------------- 7번: 계층 조정 (MinT)
+LEVEL_NAMES = {0: "total", 1: "product", 2: "bottom"}       # 전체 / 제품 합계 / 하위 18개
+BOTTOM_MODELS = ["LGBM", "ETS"]                              # 하위 기준 예측: LGBM이 주, ETS는 고전적 비교용
+
+
+def hier(D):
+    """21개 노드(전체, 제품 2, 하위 18)의 월별 값. backtest.to_frame이 쓰는 이름(Y, series, products, months)을 맞춘다."""
+    S, top = hierarchy.summing_matrix(D.products)
+    n_top = len(top)
+    return SimpleNamespace(S=S, Y=S @ D.Y, months=D.months, n_top=n_top,
+                           series=np.array(top + list(D.series)),
+                           products=np.array(["ALL"] + top[1:] + list(D.products)),
+                           level=np.array([0] + [1] * (n_top - 1) + [2] * len(D.series)))
+
+
+def stored(path, model, n_s):
+    """저장된 예측 표에서 모델 하나를 {기준 시점 인덱스: (시리즈 수, H) 배열}로 읽는다."""
+    fc = pd.read_csv(path)
+    out = {}
+    for T, g in fc[fc.model == model].groupby("T"):
+        arr = np.full((n_s, config.H), np.nan)
+        arr[g["s"].to_numpy(), g["h"].to_numpy() - 1] = g["yhat"].to_numpy()
+        assert np.isfinite(arr).all()
+        out[int(T)] = arr
+    return out
+
+
+def agg_ets(HD, origins):
+    """합계 노드 3개(전체, ABS, PC)의 기준 예측: 합계 시리즈에 AutoETS를 직접 적합한다."""
+    out, fails = {}, 0
+    for T in origins:
+        out[T], f = baselines.ets(HD.Y[:HD.n_top], T)
+        fails += f
+    return out, fails
+
+
+def hier_base(HD, origins, agg, bottom):
+    """21개 노드의 기준 예측 표: 합계 3개는 agg[T], 하위 18개는 bottom[T]. 이대로는 합이 맞지 않는다."""
+    fc = pd.concat([backtest.to_frame("Base", np.vstack([agg[T], bottom[T]]), HD, T) for T in origins],
+                   ignore_index=True)
+    return fc.assign(level=HD.level[fc["s"]])
+
+
+def _wide(fc, col):
+    """예측 표 -> 행 (기준 시점, h), 열 노드 21개."""
+    return fc.pivot_table(index=["T", "h"], columns="s", values=col).sort_index(axis=1)
+
+
+def val_errors(base_val):
+    """W의 재료: 검증 구간 기준 예측 오차 (기준 시점 12개 x h 6개 = 72행, 노드 21개 열). h를 구분하지 않고 모은다."""
+    return (_wide(base_val, "y") - _wide(base_val, "yhat")).to_numpy()
+
+
+def hier_reconcile(fc, S, G, name):
+    """기준 예측 표를 조정한 표 (행은 같고 yhat만 바뀐다). 반환: 표, 0으로 자른 하위 예측 비율."""
+    base = _wide(fc, "yhat")
+    rec, neg = hierarchy.reconcile(base.to_numpy(), S, G)
+    r = pd.DataFrame(rec, index=base.index, columns=base.columns).stack().rename("yhat")
+    return fc.drop(columns="yhat").join(r, on=["T", "h", "s"]).assign(model=name), neg
+
+
+def coherence_gap(fc, HD):
+    """기준 예측이 얼마나 안 맞는지: 합계 노드마다 sum|기준 예측 - 하위 기준 예측의 합| / sum(실제값)."""
+    b, y = _wide(fc, "yhat").to_numpy(), _wide(fc, "y").to_numpy()
+    gap = np.abs(b[:, :HD.n_top] - b[:, HD.n_top:] @ HD.S[:HD.n_top].T).sum(axis=0) / y[:, :HD.n_top].sum(axis=0)
+    return dict(zip(HD.series[:HD.n_top], gap.tolist()))
+
+
+def level_tables(fc):
+    return {"by_level": metrics.summarize(fc, "level").rename(index=LEVEL_NAMES).to_dict(orient="index"),
+            "by_node": metrics.summarize(fc, "series")[["WAPE", "Bias", "MASE"]].to_dict(orient="index")}
+
+
+def reconcile_all(HD, fc, E):
+    """W의 재료 E로 방법마다 G를 만들어 기준 예측 표 fc를 조정한다.
+    반환: {방법: 표} ('Base' = 조정 전), {방법: 0으로 자른 하위 예측 비율}, MinT 축소 강도."""
+    fcs, neg, lam = {"Base": fc}, {}, None
+    for m in hierarchy.METHODS:
+        W, l = hierarchy.w_matrix(m, HD.S, E)
+        fcs[m], neg[m] = hier_reconcile(fc, HD.S, hierarchy.g_matrix(HD.S, W), m)
+        lam = l if l is not None else lam
+    return fcs, neg, lam
+
+
+def level_pairs(fcs, model, other):
+    """세 수준(전체, 제품, 하위)마다 (모델의 기준 시점별 오차 합, 비교 대상의 기준 시점별 오차 합)."""
+    return {name: (backtest.per_origin(fcs[model][fcs[model].level == lv])[0],
+                   backtest.per_origin(fcs[other][fcs[other].level == lv])[0])
+            for lv, name in LEVEL_NAMES.items()}
+
+
+def stage_mint_val(D):
+    """7번 검증 단계: 합계를 맞추는 방법으로 MinT_shrink를 쓸지, 가장 단순한 BU를 쓸지 정한다.
+    W를 검증 구간 오차로 추정하고 같은 구간에서 평가하면 낙관적이다 (W가 그 구간의 오차 모양에 맞춰진다).
+    그래서 검증 기준 시점 12개를 앞 6개·뒤 6개로 나눠 한쪽 오차로 W를 추정하고 다른 쪽에 적용한다 (2겹 교차 적합).
+    앞쪽을 평가할 때 뒤쪽 오차로 만든 W를 쓰는 것은 한계로 남긴다 (테스트에서는 검증 구간 W만 쓴다).
+    판정: 교차 적합 P(MinT_shrink가 BU보다 세 수준 모두에서 나음) >= 0.9이면 MinT_shrink, 아니면 BU."""
+    HD, n_s = hier(D), len(D.series)
+    agg, fails = agg_ets(HD, D.val_idx)
+    base = hier_base(HD, D.val_idx, agg, stored(OUT / "val_forecasts.csv.gz", "LGBM", n_s))
+    ins, _, lam = reconcile_all(HD, base, val_errors(base))          # 참고: 같은 구간으로 추정하고 평가
+    half = len(D.val_idx) // 2
+    folds = [D.val_idx[:half], D.val_idx[half:]]
+    parts = []
+    for k in (0, 1):
+        fit, ev = base[base["T"].isin(folds[1 - k])], base[base["T"].isin(folds[k])]
+        parts.append(reconcile_all(HD, ev, val_errors(fit))[0])
+    oof = {m: pd.concat([p[m] for p in parts], ignore_index=True) for m in parts[0]}
+    gate = bootstrap.compare_pairs(level_pairs(oof, hierarchy.PRIMARY, "BU"))
+    adopted = hierarchy.PRIMARY if gate["p_better_all"] >= 0.9 else "BU"
+    print(f"[mint-val] 교차 적합 P(MinT_shrink < BU, 세 수준 모두) = {gate['p_better_all']:.3f} -> {adopted}")
+    _json({"ets_fallbacks": fails, "lambda_full_val": lam, "coherence_gap_base": coherence_gap(base, HD),
+           "in_sample": {m: level_tables(f)["by_level"] for m, f in ins.items()},
+           "cross_fit": {m: level_tables(f)["by_level"] for m, f in oof.items()}}, OUT / "mint_val.json")
+    return {
+        "created": datetime.now().isoformat(timespec="seconds"),
+        "hierarchy": "TOTAL -> ABS, PC -> 하위 18개",
+        "base": "하위 18개 = 동결한 LightGBM, 합계 3개 = 합계 시리즈에 직접 적합한 AutoETS",
+        "W": "검증 구간 기준 예측 오차를 h 구분 없이 모아 추정 (테스트에는 검증 구간 12개 기준 시점 전체로 추정해 고정)",
+        "nonneg": "조정 뒤 음수인 하위 예측은 0으로 자르고 다시 더한다",
+        "candidate": hierarchy.PRIMARY, "default": "BU", "adopted": adopted,
+        "decision_rule": "2겹 교차 적합 검증에서 P(후보가 BU보다 전체·제품·하위 세 수준 모두에서 나음) >= 0.9이면 후보, "
+                         "아니면 BU. 블록 6, 10,000회, 작은 표본 보정. 테스트 결과는 판정과 관계없이 그대로 보고한다.",
+        "gate": gate,
+    }
+
+
+def stage_mint_final(D):
+    """7번 테스트 단계: frozen_mint.json을 읽고, 검증 구간 오차 전체로 W를 추정해 고정한 뒤
+    테스트 기준 시점 24개에 적용해 한 번 채점한다. 다른 방법과 'ETS 기준 예측' 버전은 진단용으로 함께 계산한다."""
+    if not config.FROZEN_MINT_PATH.exists():
+        raise SystemExit("frozen_mint.json이 없습니다. 먼저 `python run_all.py --stage mint`로 만들고 커밋하세요.")
+    FM = json.loads(config.FROZEN_MINT_PATH.read_text(encoding="utf-8"))
+    HD, n_s = hier(D), len(D.series)
+    agg_v, _ = agg_ets(HD, D.val_idx)
+    agg_t, fails = agg_ets(HD, D.test_idx)
+    M = {"adopted": FM["adopted"], "frozen_mint_created": FM["created"], "ets_fallbacks_test": fails,
+         "lambda": {}, "coherence_gap_base": {}, "neg_share": {}, "metrics": {}, "bootstrap": {}}
+    keep = []
+    for bm in BOTTOM_MODELS:
+        E = val_errors(hier_base(HD, D.val_idx, agg_v, stored(OUT / "val_forecasts.csv.gz", bm, n_s)))
+        base = hier_base(HD, D.test_idx, agg_t, stored(OUT / "test_forecasts.csv.gz", bm, n_s))
+        fcs, M["neg_share"][bm], M["lambda"][bm] = reconcile_all(HD, base, E)
+        M["coherence_gap_base"][bm] = coherence_gap(base, HD)
+        M["metrics"][bm] = {m: level_tables(f) for m, f in fcs.items()}
+        M["bootstrap"][bm] = {
+            "MinT_vs_BU": bootstrap.compare_pairs(level_pairs(fcs, hierarchy.PRIMARY, "BU")),
+            "MinT_vs_Base": bootstrap.compare_pairs(level_pairs(fcs, hierarchy.PRIMARY, "Base")),
+            "BU_vs_Base": bootstrap.compare_pairs(level_pairs(fcs, "BU", "Base")),
+        }
+        keep += [f.assign(base=bm) for f in fcs.values()]
+    pd.concat(keep, ignore_index=True).to_csv(OUT / "mint_forecasts.csv.gz", index=False)
+    _json(M, OUT / "mint_results.json")
+    return M
+
+
+# ---------------------------------------------------------------- 7번: 마지막 달 기준 예측
+def stage_forecast(D):
+    """마지막 자료 월(2025-12)을 기준 시점으로 1~6개월 앞(2026-01 ~ 2026-06)을 예측한다.
+    동결한 LightGBM 설정·CQR 보정폭, frozen_mint.json에서 정한 합계 맞춤 방법과 검증 구간 W를 그대로 쓴다
+    (테스트에서 평가한 방법 그대로). 실제값이 아직 없어서 채점하지 않는다. 에이전트의 get_forecast가 이 파일을 읽는다."""
+    F = json.loads(config.FROZEN_PATH.read_text(encoding="utf-8"))
+    method = json.loads(config.FROZEN_MINT_PATH.read_text(encoding="utf-8"))["adopted"]
+    params, features = F["lgbm"]["params"], F["lgbm"]["features"]
+    T, n_s = len(D.months) - 1, len(D.series)
+    pt, lo, hi = (lgbm.to_array(lgbm.fit_predict(D.rows, T, params, features, obj, a)[0], n_s)
+                  for obj, a in [("l1", None), ("quantile", config.ALPHA_LO), ("quantile", config.ALPHA_HI)])
+    trio = np.sort(np.stack([lo, pt, hi]), axis=0)           # intervals()처럼 크기순으로 다시 놓는다
+    Q = F["conformal"]["Q"]
+    q_lo, q_hi = (np.array([Q[str(h)][j] for h in range(1, config.H + 1)]) for j in (0, 1))
+    L, U = conformal.apply(trio[0], trio[2], backtest.origin_scale(D.Y, T)[:, None], q_lo, q_hi)
+
+    HD = hier(D)
+    agg_val, _ = agg_ets(HD, D.val_idx)
+    E = val_errors(hier_base(HD, D.val_idx, agg_val, stored(OUT / "val_forecasts.csv.gz", "LGBM", n_s)))
+    W, _ = hierarchy.w_matrix(method, HD.S, E)
+    agg_T, _ = baselines.ets(HD.Y[:HD.n_top], T)
+    base = np.vstack([agg_T, pt])                                # (21, H): 합계는 ETS, 하위는 LightGBM
+    rec, neg = hierarchy.reconcile(base.T, HD.S, hierarchy.g_matrix(HD.S, W))     # (H, 21), 합이 맞음
+
+    rows = []
+    for i, name in enumerate(HD.series):
+        for h in range(1, config.H + 1):
+            r = {"series": name, "level": LEVEL_NAMES[HD.level[i]], "origin": str(D.months[T]), "h": h,
+                 "target": str(D.months[T] + h), "method": method, "point": rec[h - 1, i], "base": base[i, h - 1],
+                 "same_month_last_year": HD.Y[i, T + h - 12]}
+            if i >= HD.n_top:                                    # 구간은 하위 시리즈에만 있다 (조정 전 LightGBM 기준)
+                b = i - HD.n_top
+                r.update(p10=L[b, h - 1], p50=pt[b, h - 1], p90=U[b, h - 1])
+            rows.append(r)
+    out = pd.DataFrame(rows)
+    out.to_csv(OUT / "forecast_latest.csv.gz", index=False)
+    print(f"[forecast] 기준 시점 {D.months[T]} -> {D.months[T] + 1} ~ {D.months[T] + config.H} 예측 "
+          f"(합계 맞춤 {method}, 0으로 자른 하위 예측 {neg:.1%})")
+    return out

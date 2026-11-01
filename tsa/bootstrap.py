@@ -61,6 +61,28 @@ def compare(A_model, A_bases, b=config.BOOT_BLOCK, B=config.BOOT_B, seed=config.
     return out
 
 
+def compare_pairs(pairs, b=config.BOOT_BLOCK, B=config.BOOT_B, seed=config.SEED, correct=True):
+    """pairs: 이름 -> (모델 오차 합, 비교 대상 오차 합) (기준 시점별). compare와 같은 계산을 짝마다 하고,
+    P(모든 짝에서 모델이 나음)도 구한다. 계층 조정에서 '세 수준 모두에서 나은가'를 볼 때 쓴다."""
+    n = len(next(iter(pairs.values()))[0])
+    arrays = {}
+    for k, (a, c) in pairs.items():
+        arrays[f"{k}|model"], arrays[f"{k}|other"] = a, c
+    sums = resample_sums(arrays, b, B, seed)
+    out, win_all = {}, np.ones(B, dtype=bool)
+    for k, (a, c) in pairs.items():
+        d_hat, d = a.sum() - c.sum(), sums[f"{k}|model"] - sums[f"{k}|other"]
+        rr_hat, rr = 1.0 - a.sum() / c.sum(), 1.0 - sums[f"{k}|model"] / sums[f"{k}|other"]
+        if correct:
+            d, rr = widen(d, d_hat, n, b), widen(rr, rr_hat, n, b)
+        win = d < 0
+        win_all &= win
+        out[k] = {"p_better": float(win.mean()), "rel_reduction": float(rr_hat),
+                  "rel_reduction_q05": float(np.percentile(rr, 5)), "rel_reduction_q95": float(np.percentile(rr, 95))}
+    out["p_better_all"] = float(win_all.mean())
+    return out
+
+
 def ratio_interval(num, den, b=config.BOOT_BLOCK, B=config.BOOT_B, seed=config.SEED, level=0.90):
     """기준 시점별 분자·분모 합의 비율(예: 구간 적중률)의 부트스트랩 구간."""
     n = len(num)
