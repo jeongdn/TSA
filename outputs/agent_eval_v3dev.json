@@ -1,0 +1,255 @@
+{
+  "created": "2026-11-02T02:10:56",
+  "model": "qwen2.5:7b",
+  "endpoint_host": "localhost:11434",
+  "questions_file": "C:/Users/ame/Desktop/TSA/tests/agent_questions.json",
+  "agent_commit": "a46551a",
+  "agent_version": "v3",
+  "n_questions": 10,
+  "first_try_ok": 9,
+  "final_ok": 9,
+  "tool_choice_ok": 10,
+  "numbers_first_try": 80,
+  "numbers_final": 80,
+  "unsupported_first_try": 0,
+  "unsupported_final": 0,
+  "issues_first_try": 1,
+  "issues_final": 1,
+  "redacted_answers": 1,
+  "delivered_ok": 9,
+  "max_prompt_tokens": 3318,
+  "questions": [
+    {
+      "id": "overall",
+      "question": "LightGBM은 기준선보다 얼마나 나았나요?",
+      "expect_tools": [
+        "get_backtest"
+      ],
+      "called_tools": [
+        "get_backtest"
+      ],
+      "tool_choice_ok": true,
+      "first_try_ok": true,
+      "final_ok": true,
+      "attempts": 1,
+      "n_numbers_first": 8,
+      "n_numbers_final": 8,
+      "unsupported_first": [],
+      "unsupported_final": [],
+      "issues_first": [],
+      "issues_final": [],
+      "redacted": 0,
+      "delivered_ok": true,
+      "max_prompt_tokens": 3096
+    },
+    {
+      "id": "h1",
+      "question": "1개월 앞 예측만 보면 LightGBM이 ETS보다 나았나요?",
+      "expect_tools": [
+        "get_backtest"
+      ],
+      "called_tools": [
+        "get_backtest"
+      ],
+      "tool_choice_ok": true,
+      "first_try_ok": true,
+      "final_ok": true,
+      "attempts": 1,
+      "n_numbers_first": 0,
+      "n_numbers_final": 0,
+      "unsupported_first": [],
+      "unsupported_final": [],
+      "issues_first": [],
+      "issues_final": [],
+      "redacted": 0,
+      "delivered_ok": true,
+      "max_prompt_tokens": 1920
+    },
+    {
+      "id": "coverage",
+      "question": "P10~P90 구간은 목표만큼 실제값을 담았나요?",
+      "expect_tools": [
+        "get_backtest"
+      ],
+      "called_tools": [
+        "get_backtest"
+      ],
+      "tool_choice_ok": true,
+      "first_try_ok": true,
+      "final_ok": true,
+      "attempts": 1,
+      "n_numbers_first": 7,
+      "n_numbers_final": 7,
+      "unsupported_first": [],
+      "unsupported_final": [],
+      "issues_first": [],
+      "issues_final": [],
+      "redacted": 0,
+      "delivered_ok": true,
+      "max_prompt_tokens": 3019
+    },
+    {
+      "id": "series_oth",
+      "question": "ABS 기타 국가(ABS-OTH) 시리즈에서는 어떤 모델이 가장 좋았나요?",
+      "expect_tools": [
+        "get_backtest"
+      ],
+      "called_tools": [
+        "get_backtest"
+      ],
+      "tool_choice_ok": true,
+      "first_try_ok": true,
+      "final_ok": true,
+      "attempts": 1,
+      "n_numbers_first": 8,
+      "n_numbers_final": 8,
+      "unsupported_first": [],
+      "unsupported_final": [],
+      "issues_first": [],
+      "issues_final": [],
+      "redacted": 0,
+      "delivered_ok": true,
+      "max_prompt_tokens": 2081
+    },
+    {
+      "id": "mint",
+      "question": "제품 합계와 전체 합계를 맞출 때 MinT 대신 BU를 쓴 이유는 무엇인가요?",
+      "expect_tools": [
+        "get_backtest"
+      ],
+      "called_tools": [
+        "get_backtest"
+      ],
+      "tool_choice_ok": true,
+      "first_try_ok": true,
+      "final_ok": true,
+      "attempts": 1,
+      "n_numbers_first": 3,
+      "n_numbers_final": 3,
+      "unsupported_first": [],
+      "unsupported_final": [],
+      "issues_first": [],
+      "issues_final": [],
+      "redacted": 0,
+      "delivered_ok": true,
+      "max_prompt_tokens": 2921
+    },
+    {
+      "id": "fc_abs_chn",
+      "question": "중국으로 가는 ABS 수출의 2026년 1~3월 예측을 알려 주세요.",
+      "expect_tools": [
+        "get_forecast"
+      ],
+      "called_tools": [
+        "get_forecast"
+      ],
+      "tool_choice_ok": true,
+      "first_try_ok": true,
+      "final_ok": true,
+      "attempts": 1,
+      "n_numbers_first": 0,
+      "n_numbers_final": 0,
+      "unsupported_first": [],
+      "unsupported_final": [],
+      "issues_first": [],
+      "issues_final": [],
+      "redacted": 0,
+      "delivered_ok": true,
+      "max_prompt_tokens": 3318
+    },
+    {
+      "id": "fc_pc",
+      "question": "PC 전체 수출은 앞으로 6개월 동안 어떻게 예측되나요?",
+      "expect_tools": [
+        "get_forecast"
+      ],
+      "called_tools": [
+        "get_forecast"
+      ],
+      "tool_choice_ok": true,
+      "first_try_ok": true,
+      "final_ok": true,
+      "attempts": 1,
+      "n_numbers_first": 48,
+      "n_numbers_final": 48,
+      "unsupported_first": [],
+      "unsupported_final": [],
+      "issues_first": [],
+      "issues_final": [],
+      "redacted": 0,
+      "delivered_ok": true,
+      "max_prompt_tokens": 2582
+    },
+    {
+      "id": "fc_total",
+      "question": "ABS와 PC를 합친 전체 수출의 2026-01 예측은 얼마인가요?",
+      "expect_tools": [
+        "get_forecast"
+      ],
+      "called_tools": [
+        "get_forecast"
+      ],
+      "tool_choice_ok": true,
+      "first_try_ok": true,
+      "final_ok": true,
+      "attempts": 1,
+      "n_numbers_first": 0,
+      "n_numbers_final": 0,
+      "unsupported_first": [],
+      "unsupported_final": [],
+      "issues_first": [],
+      "issues_final": [],
+      "redacted": 0,
+      "delivered_ok": true,
+      "max_prompt_tokens": 2746
+    },
+    {
+      "id": "past_origin",
+      "question": "2024-06 기준 시점에서 미국으로 가는 PC 수출을 1개월 앞으로 얼마로 예측했고, 실제는 얼마였나요?",
+      "expect_tools": [
+        "get_forecast"
+      ],
+      "called_tools": [
+        "get_forecast"
+      ],
+      "tool_choice_ok": true,
+      "first_try_ok": true,
+      "final_ok": true,
+      "attempts": 1,
+      "n_numbers_first": 6,
+      "n_numbers_final": 6,
+      "unsupported_first": [],
+      "unsupported_final": [],
+      "issues_first": [],
+      "issues_final": [],
+      "redacted": 0,
+      "delivered_ok": true,
+      "max_prompt_tokens": 2672
+    },
+    {
+      "id": "no_data",
+      "question": "2027년 중국 ABS 수출은 얼마나 될까요?",
+      "expect_tools": [],
+      "called_tools": [
+        "get_forecast"
+      ],
+      "tool_choice_ok": true,
+      "first_try_ok": false,
+      "final_ok": false,
+      "attempts": 1,
+      "n_numbers_first": 0,
+      "n_numbers_final": 0,
+      "unsupported_first": [],
+      "unsupported_final": [],
+      "issues_first": [
+        "질문의 기간(2027)은 도구 결과에 없는데, 그 기간의 예측(자료)이 없다는 말이 답에 없습니다"
+      ],
+      "issues_final": [
+        "질문의 기간(2027)은 도구 결과에 없는데, 그 기간의 예측(자료)이 없다는 말이 답에 없습니다"
+      ],
+      "redacted": 1,
+      "delivered_ok": false,
+      "max_prompt_tokens": 3185
+    }
+  ]
+}
