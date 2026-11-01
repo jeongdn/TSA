@@ -1,0 +1,70 @@
+[
+  {
+    "id": "t01",
+    "question": "여러 예측 모델 가운데 테스트 기간에 오차가 가장 작았던 모델은 무엇인가요? 모델별 오차율도 함께 알려 주세요.",
+    "expect_tools": [
+      "get_backtest"
+    ]
+  },
+  {
+    "id": "t02",
+    "question": "3개월 뒤를 예측할 때는 모델마다 오차율이 얼마나 났나요?",
+    "expect_tools": [
+      "get_backtest"
+    ]
+  },
+  {
+    "id": "t03",
+    "question": "LightGBM 예측은 테스트 기간에 실제 수출 물량보다 전반적으로 많게 잡는 편이었나요, 적게 잡는 편이었나요?",
+    "expect_tools": [
+      "get_backtest"
+    ]
+  },
+  {
+    "id": "t04",
+    "question": "멕시코로 가는 ABS 수출은 모델별 예측 오차가 어땠나요? ETS와 LightGBM 중 어느 쪽이 더 나았나요?",
+    "expect_tools": [
+      "get_backtest"
+    ]
+  },
+  {
+    "id": "t05",
+    "question": "인도향 PC 수출 물량은 2026년 4~6월에 매달 얼마씩 나갈 것으로 예측되나요?",
+    "expect_tools": [
+      "get_forecast"
+    ]
+  },
+  {
+    "id": "t06",
+    "question": "ABS 수출 합계가 2026년 상반기 동안 작년 같은 달보다 늘어날지 줄어들지 월별로 알려 주세요.",
+    "expect_tools": [
+      "get_forecast"
+    ]
+  },
+  {
+    "id": "t07",
+    "question": "ABS·PC 전체 수출 물량은 앞으로 6개월 중 어느 달이 가장 많고 어느 달이 가장 적을 것으로 예측되나요?",
+    "expect_tools": [
+      "get_forecast"
+    ]
+  },
+  {
+    "id": "t08",
+    "question": "태국으로 가는 ABS 수출은 2026년 3월에 얼마로 예측되나요? 예상 범위도 함께 알려 주세요.",
+    "expect_tools": [
+      "get_forecast"
+    ]
+  },
+  {
+    "id": "t09",
+    "question": "2024년 12월 기준으로 냈던 튀르키예향 ABS 수출 예측에서 2025년 2월 물량은 얼마로 봤고, 실제로는 얼마가 나갔나요? 실제값이 예측 범위 안에 들어왔나요?",
+    "expect_tools": [
+      "get_forecast"
+    ]
+  },
+  {
+    "id": "t10",
+    "question": "폴리프로필렌(PP) 수출은 2026년 상반기에 얼마나 될 것으로 예측되나요?",
+    "expect_tools": []
+  }
+]
