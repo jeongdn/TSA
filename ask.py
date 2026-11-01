@@ -16,7 +16,7 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
-from tsa import config, qa_agent
+from tsa import config, numcheck, qa_agent
 
 
 def show(out):
@@ -28,7 +28,8 @@ def show(out):
     for x in c.get("issues", []):
         print("  문제:", x)
     if not c["ok"]:
-        print("경고: 검사를 통과하지 못한 답변입니다:", ", ".join(c["unsupported"] + c.get("issues", [])))
+        print("경고: 모델의 마지막 답이 검사를 통과하지 못했습니다:", ", ".join(c["unsupported"] + c.get("issues", [])))
+        print(f"      그래서 걸린 문장 {out['redacted']}개를 빼고 보여 줬습니다.")
 
 
 def _git_head():
@@ -58,6 +59,8 @@ def run_eval(llm, questions, name):
                      "n_numbers_first": first["n_numbers"], "n_numbers_final": out["check"]["n_numbers"],
                      "unsupported_first": first["unsupported"], "unsupported_final": out["check"]["unsupported"],
                      "issues_first": first.get("issues", []), "issues_final": out["check"].get("issues", []),
+                     "redacted": out.get("redacted", 0),
+                     "delivered_ok": numcheck.check(out["answer"], out["tool_calls"], q["question"])["ok"],
                      "max_prompt_tokens": max(used, default=None)})
         full.append(out)
         print(f"[{i}/{len(qs)}] {q['id']}: 첫 답변 {'통과' if first['ok'] else '실패'}, "
@@ -73,6 +76,7 @@ def run_eval(llm, questions, name):
          "unsupported_final": sum(len(r["unsupported_final"]) for r in rows),
          "issues_first_try": sum(len(r["issues_first"]) for r in rows),
          "issues_final": sum(len(r["issues_final"]) for r in rows),
+         "redacted_answers": sum(r["redacted"] > 0 for r in rows), "delivered_ok": sum(r["delivered_ok"] for r in rows),
          "max_prompt_tokens": max((r["max_prompt_tokens"] for r in rows if r["max_prompt_tokens"]), default=None),
          "questions": rows}
     (config.OUT_DIR / f"agent_eval{suffix}.json").write_text(json.dumps(A, ensure_ascii=False, indent=2),

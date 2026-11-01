@@ -86,6 +86,27 @@ def test_h_argument_forms():
     assert abs(f["rows_total_t"] - sum(r["forecast_t"] for r in f["rows"])) <= 0.15 and "합계" in f["summary_ko"]
 
 
+def test_text_tool_call_and_redaction():
+    """2차: 글로 쓴 도구 호출을 읽고, 다시 써도 근거 없는 숫자가 남으면 그 문장만 빼고 보여 준다."""
+    raw = 'leton\n{"name": "get_backtest", "arguments": {}}\n</tool_call>'
+    calls = qa_agent.text_tool_calls(raw)
+    assert len(calls) == 1 and calls[0]["function"]["name"] == "get_backtest"
+    assert qa_agent.text_tool_calls('예: {"a": 1} 와 {"name": "other"}') == []
+    llm = Scripted([{"role": "assistant", "content": raw}, answer_from_backtest])
+    out = qa_agent.ask("LightGBM과 ETS의 WAPE는?", llm)
+    assert out["ok"] and out["tool_calls"][0]["name"] == "get_backtest"
+
+    def stubborn(messages):
+        r = last_tool_result(messages)["models"]
+        return {"role": "assistant", "content": f"LightGBM WAPE는 {r['LightGBM']['wape_pct']}%입니다. "
+                                                "그리고 3개월 합계는 777.7톤입니다."}
+    llm = Scripted([tool_call("get_backtest", {}), stubborn, stubborn, stubborn])
+    out = qa_agent.ask("LightGBM WAPE는?", llm)
+    assert not out["ok"] and out["redacted"] == 1 and len(out["attempts"]) == 3
+    assert "777.7" not in out["answer"] and "LightGBM WAPE" in out["answer"] and "777.7" in out["model_answer"]
+    assert numcheck.check(out["answer"], out["tool_calls"])["ok"]
+
+
 def test_agent_nudges_when_no_tool_called():
     no_tool = {"role": "assistant", "content": "도구 결과에 없는 내용이라 모릅니다."}
     llm = Scripted([no_tool, tool_call("get_backtest", {}), answer_from_backtest])

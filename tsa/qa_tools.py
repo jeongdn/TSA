@@ -193,6 +193,7 @@ def _overall(R):
     p_h1 = _p(R["bootstrap"]["LGBM_h1_b3"]["ETS"]["p_better"])
     cov = {"raw": _pct(iv["raw"]["all"]["coverage"]), "cqr": _pct(iv["static"]["all"]["coverage"]),
            "ci": [_pct(x) for x in iv["static"]["all"]["coverage_ci90"]]}
+    gap = round(cov["cqr"] - 80, 1)                         # 목표 80%와의 차이 (%p)
     rec = _reconciliation()
     h1_text = ("같다" if h1["LGBM"] == h1["ETS"] else
                ("LightGBM이 더 낮다" if h1["LGBM"] < h1["ETS"] else "ETS가 더 낮다"))
@@ -213,7 +214,8 @@ def _overall(R):
             "n_origins": n},
         "h1_only": {"lightgbm_wape_pct": h1["LGBM"], "ets_wape_pct": h1["ETS"], "p_lightgbm_better_than_ets": p_h1},
         "intervals_p10_p90": {"target_coverage_pct": 80, "coverage_before_calibration_pct": cov["raw"],
-                              "coverage_cqr_pct": cov["cqr"], "coverage_cqr_ci90_pct": cov["ci"]},
+                              "coverage_cqr_pct": cov["cqr"], "coverage_cqr_ci90_pct": cov["ci"],
+                              "coverage_cqr_minus_target_pp": gap},
         "reconciliation": rec,
         "summary_ko": [
             f"테스트 WAPE(낮을수록 좋음): LightGBM {wp['LGBM']}%, ETS {wp['ETS']}%, 계절 나이브 {wp['SNaive']}%, "
@@ -226,7 +228,8 @@ def _overall(R):
             f"1개월 앞만 보면 WAPE가 LightGBM {h1['LGBM']}%, ETS {h1['ETS']}%로 {h1_text}. "
             f"P(LightGBM이 ETS보다 나음) = {p_h1}.",
             f"P10~P90 구간 적중률(목표 80%): 보정 전 {cov['raw']}%, CQR 보정 후 {cov['cqr']}% "
-            f"(90% 구간 {cov['ci'][0]}% ~ {cov['ci'][1]}%).",
+            f"(90% 구간 {cov['ci'][0]}% ~ {cov['ci'][1]}%). 보정 후 적중률은 목표보다 {abs(gap)}%p "
+            + ("높다 (구간이 필요보다 넓다)." if gap > 0 else "낮다 (구간이 필요보다 좁다)." if gap < 0 else "차이가 없다."),
             rec["summary_ko"],
         ],
         "notes": "P는 테스트 기준 시점을 길이 6 블록으로 다시 뽑는 부트스트랩 10,000회에서 WAPE가 더 낮게 나온 비율이다. "

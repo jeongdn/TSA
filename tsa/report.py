@@ -427,42 +427,57 @@ def mint_md(M, MV, FM):
     return "\n".join(L) + "\n"
 
 
-def agent_md(A):
-    """11절: 질의응답 에이전트 평가 (python ask.py --eval이 쓴 outputs/agent_eval.json)."""
-    n = A["n_questions"]
+# 에이전트 평가 실행: (파일, 짧은 이름, 설명). 있는 파일만 11절에 싣는다
+AGENT_RUNS = [
+    ("agent_eval.json", "1차", "고치기 전 에이전트, 개발용 질문 10개 (실행 전에 고정)"),
+    ("agent_eval_dev2.json", "2차 개발", "고친 에이전트, 같은 개발용 질문 (고칠 때 본 질문이라 낙관적)"),
+    ("agent_eval_test.json", "2차 테스트", "고친 에이전트(태그 `freeze-agent`), 새 테스트 질문 10개 (독립 에이전트가 "
+                                          "작성, 고친 사람은 실행 전까지 보지 않음, 한 번 실행)"),
+]
+
+
+def agent_md(runs):
+    """11절: 질의응답 에이전트 평가. runs = [(짧은 이름, 설명, ask.py --eval이 쓴 JSON)]."""
+    A0 = runs[0][2]
     L = ["\n## 11. 질의응답 에이전트 (7번)\n",
-         f"- 모델 `{A['model']}` (OpenAI 호환 API, {A['endpoint_host']}), 실행 {A['created']}, "
-         f"미리 정한 질문 {n}개 (`tests/agent_questions.json`)",
-         f"- 숫자 검사 통과: 첫 답변 {A['first_try_ok']}/{n}, 근거 없는 숫자를 알려 주고 한 번 다시 쓰게 한 뒤 "
-         f"{A['final_ok']}/{n}",
-         f"- 기대한 도구를 부른 질문: {A['tool_choice_ok']}/{n}",
-         f"- 답변 속 숫자 중 근거 없는 숫자: 첫 답변 {A['unsupported_first_try']}개 / {A['numbers_first_try']}개, "
-         f"최종 {A['unsupported_final']}개 / {A['numbers_final']}개"
-         + (f"\n- 가장 긴 요청의 입력 토큰 수: {A['max_prompt_tokens']:,} (로컬 서버의 문맥 길이보다 작아야 앞부분이 "
-            "잘리지 않는다)" if A.get("max_prompt_tokens") else ""),
-         ]
-    sr = A.get("semantic_review")
-    if sr:
-        L.append(f"- 뜻 검토 ({sr['reviewer']}): 숫자 검사가 못 보는 것(숫자를 맞는 항목에 붙였는지, '나았다' 같은 주장이 "
-                 f"도구 결과와 맞는지, 질문에 답했는지)을 답변마다 다시 봤다. 주장이 모두 도구 결과와 맞고 질문에도 답한 "
-                 f"최종 답변 {sr['faithful']}/{n}, 숫자 검사는 통과했지만 뜻 검토에서 걸린 답변 "
-                 f"{sr['passed_numbers_but_unfaithful']}개. 항목별: 주장이 모두 맞음 {sr['claims_faithful']}/{n}, "
-                 f"질문에 답함 {sr['answers_question']}/{n}, 알맞은 도구·인자 {sr['right_tool_and_args']}/{n}, "
-                 f"한국어로만 답함 {sr['korean_only']}/{n}.")
-    L.append("")
-    head = "| 질문 | 부른 도구 | 첫 답변 | 최종 | 근거 없던 숫자 (첫 답변) |" + (" 뜻 검토 |" if sr else "")
-    L += [head, "|---|---|---|---|---|" + ("---|" if sr else "")]
-    for q in A["questions"]:
-        tools = ", ".join(q["called_tools"]) or "-"
-        row = (f"| {q['question']} | {tools} | {'통과' if q['first_try_ok'] else '실패'} | "
-               f"{'통과' if q['final_ok'] else '실패'} | {', '.join(q['unsupported_first']) or '-'} |")
+         f"- 모델 `{A0['model']}` (OpenAI 호환 API, {A0['endpoint_host']}). 질문 파일은 모두 실행 전에 커밋해 고정했다.",
+         "- 숫자 검사: 답변의 숫자가 도구 결과나 질문에 있는가. 2차부터 기간 불일치(도구 결과에 없는 달·해에 도구 숫자를 "
+         "붙인 문장)와 한자 검사를 더했다. 걸리면 알려 주고 한 번 다시 쓰게 한다.",
+         "- 뜻 검토: 독립 검토 에이전트(Claude)가 두 관점(주장별 사실 확인 / 질문에 답했는지·도구 사용)으로 답변마다 "
+         "판정했다. 통과 = 두 검토자 모두 모든 주장이 그 답변의 도구 결과와 맞다고 보고, 질문에도 답했다고 본 경우.\n",
+         "| 실행 | 에이전트와 질문 | 숫자 검사 통과 (첫 답변 / 최종) | 기대한 도구를 부름 | 뜻 검토 통과 | 가장 긴 요청 (토큰) |",
+         "|---|---|---|---|---|---|"]
+    for short, desc, A in runs:
+        n, sr = A["n_questions"], A.get("semantic_review")
+        sem = f"{sr['faithful']}/{n}" if sr else "-"
+        tok = f"{A['max_prompt_tokens']:,}" if A.get("max_prompt_tokens") else "-"
+        L.append(f"| {short} | {desc} | {A['first_try_ok']}/{n} / {A['final_ok']}/{n} | {A['tool_choice_ok']}/{n} | "
+                 f"{sem} | {tok} |")
+    for short, desc, A in runs:
+        n, sr = A["n_questions"], A.get("semantic_review")
+        L.append(f"\n### {short}: {desc}\n")
+        L.append(f"실행 {A['created']}" + (f", 에이전트 커밋 `{A['agent_commit']}`" if A.get("agent_commit") else "")
+                 + f". 답변 속 숫자 {A['numbers_first_try']}개 중 근거 없는 숫자 {A['unsupported_first_try']}개 (첫 답변)"
+                 + (f", 기간 불일치·한자 문제 {A['issues_first_try']}건 (첫 답변)" if "issues_first_try" in A else "") + "."
+                 + (f" 다시 써도 걸려서 안전장치로 문장을 뺀 답변 {A['redacted_answers']}개 (보여 준 답의 숫자 검사 통과 "
+                    f"{A['delivered_ok']}/{n})." if "redacted_answers" in A else ""))
         if sr:
-            v = sr["by_id"].get(q["id"], {})
-            row += f" {'맞음' if v.get('faithful') else '문제: ' + v.get('summary_ko', '-')} |"
-        L.append(row)
-    L.append("\n숫자 검사는 '답변의 숫자가 도구 결과 어딘가에 있는가'만 본다. 맞는 항목과 짝지었는지까지는 확인하지 않는다"
-             + (" (그래서 뜻 검토를 따로 했다. 검토자도 AI라 사람이 다시 볼 수 있게 답변 전문은 outputs/cache/에 남겼다)."
-                if sr else "."))
+            L.append(f"뜻 검토 항목별: 주장이 모두 맞음 {sr['claims_faithful']}/{n}, 질문에 답함 {sr['answers_question']}/{n}, "
+                     f"알맞은 도구·인자 {sr['right_tool_and_args']}/{n}, 한국어로만 답함 {sr['korean_only']}/{n}. "
+                     f"숫자 검사는 통과했지만 뜻 검토에서 걸린 답변 {sr['passed_numbers_but_unfaithful']}개.")
+        red = "redacted_answers" in A
+        L += ["", "| 질문 | 부른 도구 | 첫 답변 | 최종 | 첫 답변에서 걸린 것 |" + (" 뺀 문장 |" if red else "")
+              + (" 뜻 검토 |" if sr else ""), "|---|---|---|---|---|" + ("---|" if red else "") + ("---|" if sr else "")]
+        for q in A["questions"]:
+            caught = ", ".join(q["unsupported_first"] + q.get("issues_first", [])) or "-"
+            row = (f"| {q['question']} | {', '.join(q['called_tools']) or '-'} | {'통과' if q['first_try_ok'] else '실패'} | "
+                   f"{'통과' if q['final_ok'] else '실패'} | {caught} |" + (f" {q['redacted']} |" if red else ""))
+            if sr:
+                v = sr["by_id"].get(q["id"], {})
+                row += f" {'맞음' if v.get('faithful') else '문제: ' + v.get('summary_ko', '-')} |"
+            L.append(row)
+    L.append("\n숫자 검사는 '답변의 숫자가 도구 결과 어딘가에 있는가'만 본다. 맞는 항목과 짝지었는지까지는 확인하지 않아서 "
+             "뜻 검토를 따로 했다. 검토자도 AI라 사람이 다시 볼 수 있게 답변 전문과 판정 전문은 outputs/cache/에 남겼다.")
     return "\n".join(L) + "\n"
 
 
@@ -502,8 +517,9 @@ def build():
     if (OUT / "mint_results.json").exists() and config.FROZEN_MINT_PATH.exists():
         FM = json.loads(config.FROZEN_MINT_PATH.read_text(encoding="utf-8"))
         text += mint_md(_load("mint_results.json"), _load("mint_val.json"), FM)
-    if (OUT / "agent_eval.json").exists():
-        text += agent_md(_load("agent_eval.json"))
+    runs = [(short, desc, _load(f)) for f, short, desc in AGENT_RUNS if (OUT / f).exists()]
+    if runs:
+        text += agent_md(runs)
     (config.ROOT / "RESULTS.md").write_text(text, encoding="utf-8")
     for doc in ("README.md", "SUMMARY.md"):
         inject(config.ROOT / doc, "summary_table", summary_table(R))
