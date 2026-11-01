@@ -77,8 +77,14 @@ def to_frame(rows):
     # 2차 상대국·세관·운송수단으로 쪼갠 행이 섞이면 같은 물량을 두 번 세게 된다
     df = df[(df.flowCode == "X") & (df.partner2Code == 0)
             & (df.customsCode == "C00") & (df.motCode == 0)]
-    # 목표는 순중량(kg). 없으면 단위가 kg(코드 8)인 qty로 대신한다
-    kg = df["netWgt"].where(df["netWgt"].notna(), df["qty"].where(df["qtyUnitCode"] == 8))
+    # 목표는 순중량(kg). 없으면 단위가 kg(코드 8)인 qty, 그것도 없으면 단위가 kg인 altQty로 대신한다.
+    # (PC 2017-09·2025-08에 작은 상대국 행 하나씩 netWgt가 비어 World 행까지 비었다. altQty에는 kg 값이 있다)
+    qty_kg = df["qty"].where(df["qtyUnitCode"] == 8)
+    alt_kg = df["altQty"].where(df["altQtyUnitCode"] == 8)
+    kg = df["netWgt"].where(df["netWgt"].notna(), qty_kg)
+    kg = kg.where(kg.notna(), alt_kg)
+    source = pd.Series("netWgt", index=df.index).mask(df["netWgt"].isna() & qty_kg.notna(), "qty")
+    source = source.mask(df["netWgt"].isna() & qty_kg.isna() & alt_kg.notna(), "altQty")
     out = pd.DataFrame({
         "period": pd.to_datetime(df["period"].astype(str), format="%Y%m").dt.to_period("M"),
         "hs": df["cmdCode"].astype(str),
@@ -88,6 +94,7 @@ def to_frame(rows):
         "kg": kg.astype(float),
         "usd": df["primaryValue"].astype(float),
         "estimated": (df["isNetWgtEstimated"].fillna(False) | df["isQtyEstimated"].fillna(False)).astype(bool),
+        "kg_source": source,
     })
     return out.reset_index(drop=True)
 
@@ -109,6 +116,8 @@ def check(df, start=config.START, end=config.END):
         "months": int(df["period"].nunique()),
         "max_rel_diff_world_vs_partners": float(rel),
         "estimated_rows": int(df["estimated"].sum()),
+        "kg_from_qty_or_altqty": df.loc[df["kg_source"] != "netWgt", ["period", "hs", "iso", "kg_source"]]
+                                   .astype(str).values.tolist(),
         "partners_per_month_min": int(df[df.partner != 0].groupby(["hs", "period"]).size().min()),
     }
 
