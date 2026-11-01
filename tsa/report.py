@@ -63,7 +63,7 @@ def fig_wape_by_h(R, ax):
     ax.set_xlabel("몇 개월 앞 (h)")
     ax.set_ylabel("WAPE (%)")
     ax.set_title("테스트 WAPE: 시점별", loc="left", fontsize=11)
-    ax.legend(loc="upper left", fontsize=8.5)
+    ax.legend(loc="center left", fontsize=8.5)
 
 
 def fig_coverage_by_h(R, ax):
@@ -136,7 +136,7 @@ def fig_fan(iv, wide, series=("ABS-CHN", "PC-CHN")):
         ax.plot(tx, d["point"], color=COLORS["LGBM"], lw=2, label="LightGBM 1개월 앞")
         ax.set_title(f"{s} (톤/월)", loc="left", fontsize=10.5)
         ax.tick_params(axis="x", labelsize=8)
-    axes[0].legend(loc="upper left", fontsize=8.5)
+    axes[0].legend(loc="lower left", fontsize=8.5)
     fig.tight_layout()
     fig.savefig(FIG / "fig_fan.png")
     plt.close(fig)
@@ -166,7 +166,8 @@ def _p(x, d=1):
 
 
 def _pp(x, d=1):
-    return f"{100 * x:+.{d}f}%"          # 편향처럼 부호가 있는 비율
+    v = round(100 * x, d)                # 편향처럼 부호가 있는 비율
+    return f"{0.0:.{d}f}%" if v == 0 else f"{v:+.{d}f}%"
 
 
 def _git(ref):
@@ -177,7 +178,19 @@ def _git(ref):
         return "n/a"
 
 
-def results_md(R, V, F):
+def origin_wins(fc):
+    """기준 시점별 승패: LightGBM의 기준 시점 WAPE가 기준선보다 낮은 횟수, ETS 대비 길이 6 원형 블록 승수."""
+    fc = fc.assign(ae=(fc.y - fc.yhat).abs())
+    A = fc.groupby(["model", "origin"])["ae"].sum().unstack(0)
+    out = {b: (int((A[b] > A["LGBM"]).sum()), int(len(A))) for b in ("ETS", "SNaive")}
+    d = (A["ETS"] - A["LGBM"]).to_numpy()
+    n, k = len(d), config.BOOT_BLOCK
+    blocks = [d[[(i + j) % n for j in range(k)]].sum() for i in range(n)]
+    out["ETS_blocks"] = (int(sum(x > 0 for x in blocks)), n)
+    return out
+
+
+def results_md(R, V, F, wins=None):
     m, b, sb, iv = R["metrics"], R["bootstrap"], R["selection_bias"], R["intervals"]
     L = []
     w = L.append
@@ -259,6 +272,15 @@ def results_md(R, V, F):
     for label, key, desc in rows:
         x = b[key]
         w(f"| {label} | {desc} | {x['ETS']['p_better']:.3f} | {x['SNaive']['p_better']:.3f} | {x['p_better_all']:.3f} |")
+    if wins:
+        w(f"\n기준 시점별로 보면 LightGBM의 WAPE가 ETS보다 낮은 기준 시점은 {wins['ETS'][0]}/{wins['ETS'][1]}개, "
+          f"계절 나이브보다 낮은 기준 시점은 {wins['SNaive'][0]}/{wins['SNaive'][1]}개다. "
+          f"연속 6개 기준 시점을 묶은 원형 블록 {wins['ETS_blocks'][1]}개 중 LightGBM의 오차 합이 ETS보다 작은 블록은 "
+          f"{wins['ETS_blocks'][0]}개다. "
+          + ("그래서 어떤 블록 조합을 뽑아도 LightGBM이 이기고 P가 1에 가깝게 나온다. "
+             if wins["ETS_blocks"][0] == wins["ETS_blocks"][1] else "")
+          + f"다만 서로 겹치지 않는 {config.BOOT_BLOCK}개월 블록은 {config.N_TEST // config.BOOT_BLOCK}개뿐이라, "
+          "P가 1에 가깝다고 '확실하다'로 읽으면 안 된다. 개선 폭의 90% 구간(1절)을 함께 본다.")
 
     # 5. 선택 편향
     w("\n## 5. 선택 편향 (LightGBM 설정 30개)\n")
@@ -351,7 +373,9 @@ def inject(path, name, text):
 
 def build():
     R, V, F = _load("results.json"), _load("val_summary.json"), json.loads(config.FROZEN_PATH.read_text(encoding="utf-8"))
-    (config.ROOT / "RESULTS.md").write_text(results_md(R, V, F), encoding="utf-8")
+    fc_path = OUT / "test_forecasts.csv.gz"
+    wins = origin_wins(pd.read_csv(fc_path)) if fc_path.exists() else None
+    (config.ROOT / "RESULTS.md").write_text(results_md(R, V, F, wins), encoding="utf-8")
     for doc in ("README.md", "SUMMARY.md"):
         inject(config.ROOT / doc, "summary_table", summary_table(R))
     print("RESULTS.md를 만들었습니다.")
