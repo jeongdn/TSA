@@ -12,6 +12,7 @@ P10·P90, ABS-CHN처럼 영문자에 붙은 숫자는 이름으로 보고 검사
 5. 기간 불일치: 도구 결과에 없는 달·해(질문에만 있는 기간 포함)와 도구 결과의 물량·비율을 한 문장에 쓴 경우.
    예: 2026-06 예측값을 '2027년' 값이라고 쓴 문장. 작은 정수(개월 수 등)는 물량으로 보지 않는다.
 6. 한자: 한국어 답에 한자(중국어)가 섞인 경우.
+7. 범위 밖 질문: 질문에 도구 결과에 없는 기간이 있는데, 답이 그 기간은 없다고 말하지 않은 경우 (3차에서 추가).
 한계: 값이 같은 숫자가 도구 결과 어딘가에 있으면 통과한다. 어느 항목과 맞았는지는 'source'에 남겨 사람이 확인한다.
 """
 import re
@@ -23,6 +24,7 @@ YEAR = re.compile(r"(?<![\d.])(\d{4})\s*년")                     # '2027년'처
 RANGE = re.compile(r"(\d{4})-(\d{2})\s*~\s*(\d{4})-(\d{2})")       # '2023-07 ~ 2025-06'
 SENTENCE = re.compile(r"(?<=[.!?。])\s+|\n+")
 HAN = re.compile(r"[一-鿿]")                              # 한자(중국어) 글자
+NEG = re.compile(r"없|않|아니|못|불가|제공되지|모릅|모른")                # '없다'는 뜻의 말
 
 
 def _dates(text):
@@ -119,6 +121,24 @@ def period_issues(answer, nums, tool_months):
     return out
 
 
+def question_period_issues(answer, question, tool_months):
+    """질문에 도구 결과에 없는 기간(달·해)이 있으면, 답에 그 기간과 '없다'는 말이 한 문장에 있어야 한다."""
+    if not tool_months:                       # 도구를 안 불렀으면 판단할 수 없다
+        return []
+    ds, rest = _dates(question or "")
+    years = {m[:4] for m in tool_months}
+    off = [d for d in ds if d not in tool_months] + [y for y in YEAR.findall(rest) if y not in years]
+    out = []
+    for p in dict.fromkeys(off):
+        said = False
+        for sent in SENTENCE.split(answer or ""):
+            mentions = p in _dates(sent)[0] if len(p) == 7 else p in sent     # 달은 달로, 해는 글자로 찾는다
+            said = said or bool(mentions and NEG.search(sent))
+        if not said:
+            out.append(f"질문의 기간({p})은 도구 결과에 없는데, 그 기간의 예측(자료)이 없다는 말이 답에 없습니다")
+    return out
+
+
 def check(answer, tool_log, question=""):
     """반환: {'ok', 'n_numbers', 'unsupported': [원문], 'issues': [문장], 'items': [{text, kind, source}]}.
     ok = 근거 없는 숫자도 없고 문제(기간 불일치, 한자)도 없음."""
@@ -128,7 +148,7 @@ def check(answer, tool_log, question=""):
     items += [{"text": raw, "kind": "number", "source": _source(v, dec, pct, refs)}
               for raw, v, dec, pct in _numbers(rest)]
     bad = [it["text"] for it in items if it["source"] is None]
-    issues = period_issues(answer, refs, tool_months)
+    issues = period_issues(answer, refs, tool_months) + question_period_issues(answer, question, tool_months)
     if HAN.search(answer or ""):
         issues.append("한국어 답에 한자(중국어)가 섞여 있습니다")
     return {"ok": not bad and not issues, "n_numbers": len(items), "unsupported": bad, "issues": issues,

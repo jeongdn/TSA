@@ -63,12 +63,19 @@ def test_numcheck_period_and_language():
     q = "2027년 중국 ABS 수출은?"
     wrong = numcheck.check("2027년 중국 ABS 수출은 약 11,826톤으로 예측됩니다.", log, q)
     assert not wrong["ok"] and wrong["unsupported"] == [] and wrong["issues"], wrong   # 숫자 하나하나는 근거가 있다
-    for fine in ["2027년 예측은 없습니다. 미래 예측은 2026-06까지이고, 2026-06 예측은 11,826.3톤입니다.",
-                 "2027년 예측은 없고 예측은 6개월치뿐입니다.", "2026년 6월 예측은 11,826.3톤입니다."]:
-        c = numcheck.check(fine, log, q)
+    for fine, question in [("2027년 예측은 없습니다. 미래 예측은 2026-06까지이고, 2026-06 예측은 11,826.3톤입니다.", q),
+                           ("2027년 예측은 없고 예측은 6개월치뿐입니다.", q),
+                           ("2026년 6월 예측은 11,826.3톤입니다.", "2026년 6월 중국 ABS 예측은?"),
+                           ("2026-09 예측은 없습니다.", "2026-09 중국 ABS 예측은?")]:
+        c = numcheck.check(fine, log, question)
         assert c["ok"], (fine, c)
-    han = numcheck.check("2026-06 예측은 11,826.3톤입니다. 这比去年增长了.", log, q)
+    han = numcheck.check("2026-06 예측은 11,826.3톤입니다. 这比去年增长了.", log, "")
     assert not han["ok"] and any("한자" in x for x in han["issues"])
+    # 범위 밖 질문에 다른 달 값만 늘어놓고 '없다'고 말하지 않으면 걸린다 (해와 달 모두)
+    for answer, question in [("2026-06 예측은 11,826.3톤입니다.", q),
+                             ("2026-06 예측은 11,826.3톤입니다.", "2026-09 중국 ABS 예측은?")]:
+        c = numcheck.check(answer, log, question)
+        assert not c["ok"] and any("질문의 기간" in x for x in c["issues"]), (answer, c)
 
 
 def test_h_argument_forms():
@@ -84,6 +91,9 @@ def test_h_argument_forms():
     f = qa_tools.get_forecast("ABS-CHN", h=[1, 2, 3])
     assert [r["h"] for r in f["rows"]] == [1, 2, 3]
     assert abs(f["rows_total_t"] - sum(r["forecast_t"] for r in f["rows"])) <= 0.15 and "합계" in f["summary_ko"]
+    # 예측할 달을 origin에 넣어도 그 달의 미래 예측으로 읽는다
+    g = qa_tools.get_forecast("ABS-CHN", origin="2026-02")
+    assert [r["target"] for r in g["rows"]] == ["2026-02"] and "origin_note" in g
 
 
 def test_text_tool_call_and_redaction():

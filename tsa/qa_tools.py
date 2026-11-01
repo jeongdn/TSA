@@ -108,7 +108,13 @@ def get_forecast(series=None, origin="latest", h=None):
     s, hs = _series(series), _h(h)
     origin = str(origin or "latest").strip().lower()
     method = _frozen_mint()["adopted"]
-    rows = []
+    rows, origin_note = [], None
+    future = [str(config.END + k) for k in range(1, config.H + 1)]
+    if origin in future:            # 예측할 달을 origin에 넣은 경우 (작은 모델이 자주 헷갈림): 그 달의 미래 예측으로 읽는다
+        if h is None or h == "" or h == []:
+            hs = [future.index(origin) + 1]
+        origin_note = f"origin에 예측 대상 달 {origin}을 넣어서, {config.END} 기준 미래 예측으로 바꿔 읽었다."
+        origin = "latest"
     if origin == "latest":
         f = _csv("forecast_latest.csv.gz")
         f = f[(f.series == s) & f.h.isin(hs)].sort_values("h")
@@ -136,6 +142,8 @@ def get_forecast(series=None, origin="latest", h=None):
                         + ", ".join(f"{r['target']} {r['p10_t']:,.1f} ~ {r['p90_t']:,.1f}톤" for r in rows) + ".")
         summary += f" 미래 예측이 있는 달은 {FIRST} ~ {LAST}뿐이다."
         out.update(summary_ko=summary, notes=_notes(s, method))
+        if origin_note:
+            out["origin_note"] = origin_note
         return out
 
     origins = [str(p) for p in config.TEST_ORIGINS]
@@ -168,7 +176,10 @@ def _reconciliation():
     M, FM = _json("mint_results.json"), _frozen_mint()
     mt, b = M["metrics"]["LGBM"], M["bootstrap"]["LGBM"]["MinT_vs_BU"]
     w = {k: {m: _pct(mt[m]["by_level"][k]["WAPE"]) for m in METHOD_KO} for k in LEVEL_KO}
-    decision = (f"검증 구간 2겹 교차 적합에서 P(MinT가 전체·제품·하위 모두 BU보다 나음) = "
+    decision = (f"검증 구간 2겹 교차 적합의 재표집 중 MinT가 전체·제품·하위 모두에서 BU보다 나았던 비율이 "
+                f"{FM['gate']['p_better_all']:.3f}로 기준 0.9에 못 미쳐 {FM['adopted']} 채택"
+                if FM["adopted"] == "BU" else
+                f"검증 구간 2겹 교차 적합의 재표집 중 MinT가 세 수준 모두에서 BU보다 나았던 비율 "
                 f"{FM['gate']['p_better_all']:.3f}, 기준 0.9 -> {FM['adopted']} 채택")
     return {
         "adopted_method": FM["adopted"], "decision": decision,
@@ -226,7 +237,10 @@ def _overall(R):
             f"블록 부트스트랩에서 LightGBM의 WAPE가 ETS와 계절 나이브 둘 다보다 낮게 나온 비율은 {_p(b['p_better_all'])}이다 "
             "(미래에 나을 확률이 아니다).",
             f"1개월 앞만 보면 WAPE가 LightGBM {h1['LGBM']}%, ETS {h1['ETS']}%로 {h1_text}. "
-            f"P(LightGBM이 ETS보다 나음) = {p_h1}.",
+            f"블록 부트스트랩 재표집 중 LightGBM이 ETS보다 나았던 비율은 {p_h1}이다 (확실한 차이가 아니다)."
+            if p_h1 < 0.9 else
+            f"1개월 앞만 보면 WAPE가 LightGBM {h1['LGBM']}%, ETS {h1['ETS']}%로 {h1_text}. "
+            f"블록 부트스트랩 재표집 중 LightGBM이 ETS보다 나았던 비율은 {p_h1}이다.",
             f"P10~P90 구간 적중률(목표 80%): 보정 전 {cov['raw']}%, CQR 보정 후 {cov['cqr']}% "
             f"(90% 구간 {cov['ci'][0]}% ~ {cov['ci'][1]}%). 보정 후 적중률은 목표보다 {abs(gap)}%p "
             + ("높다 (구간이 필요보다 넓다)." if gap > 0 else "낮다 (구간이 필요보다 좁다)." if gap < 0 else "차이가 없다."),
@@ -248,7 +262,7 @@ def _by_h(R, h):
                + f". 가장 낮은 모델: {_best(raw, MODEL_KO)}. P10~P90 적중률(CQR 보정 후) {cov}%.")
     if h == 1:
         out["p_lightgbm_better_than_ets"] = _p(R["bootstrap"]["LGBM_h1_b3"]["ETS"]["p_better"])
-        summary += f" P(LightGBM이 ETS보다 나음) = {out['p_lightgbm_better_than_ets']}."
+        summary += f" 블록 부트스트랩 재표집 중 LightGBM이 ETS보다 나았던 비율은 {out['p_lightgbm_better_than_ets']}이다."
     out["summary_ko"] = summary
     return out
 
