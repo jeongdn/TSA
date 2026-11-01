@@ -43,6 +43,18 @@ def _git_head():
         return "n/a"
 
 
+def answer_kind(out):
+    """답이 어떻게 만들어졌나: text(2차, 모델이 쓴 글), final(3차, final_answer 호출), text_ids(3차, 글에 적은 id),
+    guard(3차, 범위 밖이라 '답할 수 없음'으로 바꿈), none(3차, 답을 고르지 못함)."""
+    if "final" not in out:
+        return "text"
+    if out.get("guard"):
+        return "guard"
+    if not out["final"]:
+        return "none"
+    return "text_ids" if out["final"].get("from_text") else "final"
+
+
 def run_eval(llm, questions, name, ask=qa_agent.ask):
     qs = json.loads(Path(questions).read_text(encoding="utf-8"))
     suffix = f"_{name}" if name else ""
@@ -60,8 +72,9 @@ def run_eval(llm, questions, name, ask=qa_agent.ask):
                      "n_numbers_first": first["n_numbers"], "n_numbers_final": out["check"]["n_numbers"],
                      "unsupported_first": first["unsupported"], "unsupported_final": out["check"]["unsupported"],
                      "issues_first": first.get("issues", []), "issues_final": out["check"].get("issues", []),
-                     "redacted": out.get("redacted", 0),
-                     "delivered_ok": numcheck.check(out["answer"], out["tool_calls"], q["question"])["ok"],
+                     "redacted": out.get("redacted", 0), "answer_kind": answer_kind(out),
+                     "delivered_ok": out["shown_ok"] if "shown_ok" in out else
+                     numcheck.check(out["answer"], out["tool_calls"], q["question"])["ok"],
                      "max_prompt_tokens": max(used, default=None)})
         full.append(out)
         print(f"[{i}/{len(qs)}] {q['id']}: 첫 답변 {'통과' if first['ok'] else '실패'}, "
@@ -78,6 +91,7 @@ def run_eval(llm, questions, name, ask=qa_agent.ask):
          "issues_first_try": sum(len(r["issues_first"]) for r in rows),
          "issues_final": sum(len(r["issues_final"]) for r in rows),
          "redacted_answers": sum(r["redacted"] > 0 for r in rows), "delivered_ok": sum(r["delivered_ok"] for r in rows),
+         "answer_kinds": {k: sum(r["answer_kind"] == k for r in rows) for k in dict.fromkeys(r["answer_kind"] for r in rows)},
          "max_prompt_tokens": max((r["max_prompt_tokens"] for r in rows if r["max_prompt_tokens"]), default=None),
          "questions": rows}
     (config.OUT_DIR / f"agent_eval{suffix}.json").write_text(json.dumps(A, ensure_ascii=False, indent=2),

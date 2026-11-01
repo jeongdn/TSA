@@ -428,15 +428,20 @@ def mint_md(M, MV, FM):
 
 
 # 에이전트 평가 실행: (파일, 짧은 이름, 설명). 있는 파일만 11절에 싣는다
-AGENT_RUNS = [
-    ("agent_eval.json", "개발 1", "처음 에이전트, 개발용 질문 10개 (실행 전에 고정)"),
-    ("agent_eval_dev2.json", "개발 2", "1번 고친 에이전트, 같은 개발용 질문 (고칠 때 본 질문이라 낙관적)"),
-    ("agent_eval_dev3.json", "개발 3", "2번 고친 에이전트, 같은 개발용 질문 (고칠 때 본 질문이라 낙관적)"),
-    ("agent_eval_dev4.json", "개발 4", "3번 고친 에이전트(동결본), 같은 개발용 질문 (고칠 때 본 질문이라 낙관적)"),
+AGENT_RUNS = [   # (결과 파일, 짧은 이름, 설명, 질문별 상세 표를 실을지)
+    ("agent_eval.json", "개발 1", "처음 에이전트, 개발용 질문 10개 (실행 전에 고정)", True),
+    ("agent_eval_dev2.json", "개발 2", "1번 고친 에이전트, 같은 개발용 질문 (고칠 때 본 질문이라 낙관적)", False),
+    ("agent_eval_dev3.json", "개발 3", "2번 고친 에이전트, 같은 개발용 질문 (고칠 때 본 질문이라 낙관적)", False),
+    ("agent_eval_dev4.json", "개발 4", "3번 고친 에이전트(2차 동결본), 같은 개발용 질문 (고칠 때 본 질문이라 낙관적)", False),
     ("agent_eval_test_v1.json", "테스트·처음", "처음 에이전트(개발 1과 같은 코드, 질문 파일만 바꿔 별도 worktree에서), 테스트 "
-                                              "질문 10개 (동결본 결과를 본 뒤 비교용으로 정해 돌림)"),
-    ("agent_eval_test.json", "테스트·동결본", "최종 에이전트(태그 `freeze-agent`), 새 테스트 질문 10개 (독립 에이전트가 "
-                                         "작성, 고친 사람은 실행 전까지 보지 않음, 한 번 실행)"),
+                                              "질문 10개 (동결본 결과를 본 뒤 비교용으로 정해 돌림)", True),
+    ("agent_eval_test.json", "테스트·동결본", "2차 동결본(태그 `freeze-agent`), 테스트 질문 10개 (독립 에이전트가 작성, 고친 "
+                                         "사람은 실행 전까지 보지 않음, 한 번 실행)", True),
+    ("agent_eval_v3dev2.json", "3차·개발용", "3차 에이전트, 개발용 질문 10개 (3차를 고칠 때 본 질문이라 낙관적)", False),
+    ("agent_eval_v3t1b.json", "3차·테스트", "3차 에이전트, 1차 테스트 질문 10개 (3차를 고칠 때 본 질문이라 낙관적)", False),
+    ("agent_eval_t2_v1.json", "테스트2·처음", "처음 에이전트, 새 테스트 질문 10개 (테스트2, 독립 에이전트가 작성, 한 번)", True),
+    ("agent_eval_t2_v2.json", "테스트2·2차", "2차 동결본(`freeze-agent`), 같은 테스트2 질문 (한 번)", True),
+    ("agent_eval_t2_v3.json", "테스트2·3차", "3차 동결본(`freeze-agent-v3`), 같은 테스트2 질문 (한 번)", True),
 ]
 
 
@@ -454,7 +459,7 @@ def agent_md(runs):
          "| 실행 | 에이전트와 질문 | 숫자 검사 통과 (첫 답변 / 최종) | 보여 준 답의 숫자 검사 | 기대한 도구를 부름 | "
          "뜻 검토 통과 | 가장 긴 요청 (토큰) |",
          "|---|---|---|---|---|---|---|"]
-    for short, desc, A in runs:
+    for short, desc, A, _ in runs:
         n, sr = A["n_questions"], A.get("semantic_review")
         sem = f"{sr['faithful']}/{n}" if sr else "-"
         tok = f"{A['max_prompt_tokens']:,}" if A.get("max_prompt_tokens") else "-"
@@ -464,14 +469,23 @@ def agent_md(runs):
     L.append("")
     L.append("질문이 실행마다 10개뿐이라 몇 개 차이는 우연일 수 있다. 고치기 전과 후를 공정하게 비교하는 것은 같은 테스트 "
              "질문으로 돌린 '테스트·처음'과 '테스트·동결본' 두 줄이다 (개발 실행은 고칠 때 본 질문이라 낙관적).")
-    for short, desc, A in runs:
+    for short, desc, A, detail in runs:
+        if not detail:
+            continue
         n, sr = A["n_questions"], A.get("semantic_review")
-        L.append(f"\n### {short}: {desc}\n")
+        L.append("")
+        L.append(f"### {short}: {desc}")
+        L.append("")
         L.append(f"실행 {A['created']}" + (f", 에이전트 커밋 `{A['agent_commit']}`" if A.get("agent_commit") else "")
                  + f". 답변 속 숫자 {A['numbers_first_try']}개 중 근거 없는 숫자 {A['unsupported_first_try']}개 (첫 답변)"
                  + (f", 기간 불일치·한자 문제 {A['issues_first_try']}건 (첫 답변)" if "issues_first_try" in A else "") + "."
                  + (f" 다시 써도 걸려서 안전장치로 문장을 뺀 답변 {A['redacted_answers']}개 (보여 준 답의 숫자 검사 통과 "
                     f"{A['delivered_ok']}/{n})." if "redacted_answers" in A else ""))
+        kinds = A.get("answer_kinds", {})
+        if any(k != "text" for k in kinds):
+            names = {"final": "final_answer로 고름", "text_ids": "글에 적은 id를 읽음", "guard": "범위 밖이라 '답할 수 없음'으로 바꿈",
+                     "none": "고르지 못함('답을 만들지 못했습니다')"}
+            L.append("3차 답이 만들어진 방식: " + ", ".join(f"{names.get(k, k)} {v}" for k, v in kinds.items()) + ".")
         if sr:
             L.append(f"뜻 검토 항목별: 주장이 모두 맞음 {sr['claims_faithful']}/{n}, 질문에 답함 {sr['answers_question']}/{n}, "
                      f"알맞은 도구·인자 {sr['right_tool_and_args']}/{n}, 한국어로만 답함 {sr['korean_only']}/{n}. "
@@ -529,7 +543,7 @@ def build():
     if (OUT / "mint_results.json").exists() and config.FROZEN_MINT_PATH.exists():
         FM = json.loads(config.FROZEN_MINT_PATH.read_text(encoding="utf-8"))
         text += mint_md(_load("mint_results.json"), _load("mint_val.json"), FM)
-    runs = [(short, desc, _load(f)) for f, short, desc in AGENT_RUNS if (OUT / f).exists()]
+    runs = [(short, desc, _load(f), detail) for f, short, desc, detail in AGENT_RUNS if (OUT / f).exists()]
     if runs:
         text += agent_md(runs)
     (config.ROOT / "RESULTS.md").write_text(text, encoding="utf-8")

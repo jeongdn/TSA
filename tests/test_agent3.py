@@ -109,6 +109,15 @@ def test_unanswerable_and_out_of_range():
     assert out["guard"] and out["answer"] == f"{qa_agent3.REFUSE} {qa_facts.RANGE}" and out["ok"]
 
 
+def test_guard_text_is_not_removed():
+    """미래를 묻는데 과거 기준 시점을 불러 그 달을 고르면, '답할 수 없음'과 예측 범위 안내가 그대로 보여야 한다
+    (보호 장치 문장은 코드가 만든 것이라 숫자 검사로 지우지 않는다)."""
+    pick_first = lambda m: final([last_facts(m)[0]["id"]])  # noqa: E731
+    llm = Scripted([call("get_forecast", {"series": "ABS", "origin": "2025-06"}), pick_first])
+    out = qa_agent3.ask("ABS 수출 합계가 2026년 상반기에 작년보다 늘어날까요?", llm)
+    assert out["guard"] and out["answer"] == f"{qa_agent3.REFUSE} {qa_facts.RANGE}" and out["shown_ok"], out["answer"]
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

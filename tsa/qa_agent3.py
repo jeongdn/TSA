@@ -17,9 +17,10 @@ SYSTEM = f"""너는 한국의 ABS·PC 수출 수요예측 프로젝트 결과를
    - 모델 성능·정확도·비교, 편향, P10~P90 적중률, 부트스트랩, 합계 맞추기(BU·MinT) -> get_backtest. 전체 요약은 인자 없이 부른다.
    - n개월 앞 성능 -> get_backtest(h=[n]) (series 없이). 시리즈 하나의 성능 -> get_backtest(series=시리즈).
    - 앞으로의 예측 물량 -> get_forecast(series=시리즈). 과거 기준 시점에서 낸 예측과 실제값 -> get_forecast(series=시리즈, origin='YYYY-MM').
-   - 시리즈는 질문한 제품·국가와 같아야 한다. 'ABS 합계·ABS 전체'는 ABS, 'PC 합계'는 PC, 'ABS와 PC를 합친 전체'는 TOTAL, 나라 하나는 '제품-국가'(예: ABS-CHN)다.
+   - 시리즈는 질문한 제품·국가와 같아야 한다. 'ABS 합계·ABS 전체'는 ABS, 'PC 합계·PC 전체'는 PC, 'ABS와 PC를 합친 전체'는 TOTAL, 나라 하나는 '제품-국가'(예: ABS-CHN)다.
+   - 이 자료에는 ABS와 PC만 있다. 질문한 제품이 ABS나 PC가 아니면(예: PP, PE) 다른 시리즈의 값을 대신 쓰지 않는다.
    - 질문한 달·시점만 필요하면 h로 좁혀 부른다 (예: 2026년 4~6월이면 h=[4, 5, 6]).
-2. 도구 결과의 facts는 코드가 만든 사실 문장이다. id는 '호출번호:내용'이다 (예: '1:2026-04-예측', '1:최저모델', '2:ABS-MEX-모델별WAPE'). 질문에 답하는 문장의 id만 질문 순서대로 골라 final_answer(answerable=true, fact_ids=[...])를 부른다. 질문한 대상(제품·국가·달·모델)이 그대로 나오는 문장만 고른다. 질문이 여러 가지를 물으면 각각에 맞는 문장을 모두 고른다.
+2. 도구 결과의 facts는 코드가 만든 사실 문장이다. id는 '호출번호:내용'이다 (예: '1:2026-04-예측', '1:최저모델', '2:ABS-MEX-모델별WAPE'). 질문에 답하는 문장의 id만 질문 순서대로 골라 final_answer(answerable=true, fact_ids=[...])를 부른다. 질문한 대상(제품·국가·달·모델)이 그대로 나오는 문장만 고른다. 문장의 대상이 질문한 대상과 다르면 고르지 않는다. 질문이 여러 가지를 물으면 각각에 맞는 문장을 모두 고른다.
 3. 도구 결과로 답할 수 없으면(자료에 없는 제품, {qa_tools.FIRST} ~ {qa_tools.LAST} 밖의 미래 기간 등) 도구로 확인한 뒤 final_answer(answerable=false, fact_ids=[그 이유를 보여 주는 문장 id])를 부른다.
 4. 글로 직접 답하지 않는다. 답은 final_answer로만 한다."""
 
@@ -152,12 +153,15 @@ def ask(question, llm, max_steps=10, max_fixes=2):
         answer = render(answerable, final["fact_ids"], facts)
     check = _check(answer, log, question, answerable)
     if answerable and any("질문의 기간" in x for x in check["issues"]):
-        # 질문한 기간이 도구 결과에 없는데 답하려 했다: '답할 수 없음'과 예측 범위 안내로 바꾼다
+        # 질문한 기간이 도구 결과에 없는데 답하려 했다: '답할 수 없음'과 예측 범위 안내로 바꾼다.
+        # 이 두 문장은 코드가 config에서 만든 것이라 숫자 검사로 지우지 않는다 (지우면 '답을 못 만듦'만 남는다)
         guard = "질문한 기간이 도구 결과에 없어 '답할 수 없음'으로 바꿈"
         answerable, answer = False, " ".join([REFUSE, qa_facts.RANGE])
-        check = _check(answer, log, question, False)
+        check = {"ok": True, "n_numbers": 0, "unsupported": [], "issues": [], "items": [], "trusted": "guard"}
     shown, removed = (answer, 0) if check["ok"] else redact(answer, log, question)
-    return {"question": question, "answer": shown, "model_answer": json.dumps(final, ensure_ascii=False),
+    shown_ok = guard is not None or _check(shown, log, question, answerable)["ok"]   # 보여 주는 답을 같은 규칙으로 다시 봄
+    return {"question": question, "answer": shown, "shown_ok": shown_ok,
+            "model_answer": json.dumps(final, ensure_ascii=False),
             "ok": check["ok"], "check": check, "redacted": removed, "attempts": [{"answer": answer, "check": check}],
             "tool_calls": log, "final": final, "answerable": answerable, "nudges": nudges, "fixes": fixes,
             "guard": guard, "n_facts": len(facts), "model_texts": texts}
