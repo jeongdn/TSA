@@ -229,6 +229,33 @@ def results_md(R, V, F, wins=None):
     verdict = "넘었다" if bl["p_better_all"] >= 0.9 else "넘지 못했다"
     w(f"판정: 미리 정한 기준 P >= 0.9를 테스트에서 **{verdict}** (P = {bl['p_better_all']:.3f}). "
       f"검증 구간 값은 {V['bootstrap_val']['p_better_all']:.3f}였다 (같은 구간에서 고른 모델이라 낙관적인 값).\n")
+    # 좋지 않았던 점: 조건을 코드로 판정해서 적는다 (결과가 바뀌면 문장도 바뀐다)
+    bad, share = [], R["series_share_test"]
+    p1 = b["LGBM_h1_b3"]["ETS"]["p_better"]
+    if p1 < 0.9:
+        bad.append(f"1개월 앞(h=1)만 보면 ETS 대비 P = {p1:.3f}로 기준 0.9에 못 미친다 "
+                   f"(WAPE LightGBM {_p(m['LGBM']['by_h']['1']['WAPE'])}, ETS {_p(m['ETS']['by_h']['1']['WAPE'])}).")
+    worse = [s for s in share if R["by_series"]["LGBM"][s]["WAPE"] > R["by_series"]["ETS"][s]["WAPE"]]
+    if worse:
+        bad.append("ETS가 LightGBM보다 나은 시리즈: " + ", ".join(
+            f"{s} (ETS {_p(R['by_series']['ETS'][s]['WAPE'])}, LightGBM {_p(R['by_series']['LGBM'][s]['WAPE'])}, "
+            f"테스트 물량 비중 {_p(share[s])})" for s in sorted(worse, key=share.get, reverse=True)) + ".")
+    if sb["spearman_val_test"] < 0.3:
+        bad.append(f"설정 30개의 검증·테스트 순위 상관이 {sb['spearman_val_test']:.3f}이고, 검증에서 고른 설정은 "
+                   f"테스트에서 {sb['n_configs']}개 중 {sb['winner_test_rank']}위다.")
+    ci = iv["static"]["all"]["coverage_ci90"]
+    if not ci[0] <= 0.8 <= ci[1]:
+        bad.append(f"CQR(검증 구간 보정) 적중률 {_p(iv['static']['all']['coverage'])}의 90% 구간 "
+                   f"({_p(ci[0])} ~ {_p(ci[1])})이 목표 80%를 포함하지 않는다.")
+    if R["ext"]["test_wape_alternative"] < R["ext"]["test_wape_chosen"]:
+        bad.append(f"외부 지표를 {'뺀' if R['ext']['use_ext'] else '넣은'} 쪽의 테스트 WAPE"
+                   f"({_p(R['ext']['test_wape_alternative'])})가 동결한 쪽({_p(R['ext']['test_wape_chosen'])})보다 "
+                   "낮았다. 검증 규칙대로 정한 것이라 바꾸지 않았다.")
+    if bad:
+        w("좋지 않았던 점:\n")
+        for x in bad:
+            w(f"- {x}")
+        w("")
     w("P는 기준 시점을 길이 6 블록으로 다시 뽑아 얻은 '오차 합 차이'의 분포를 작은 표본 보정으로 "
       "sqrt(24/18)배 넓힌 뒤, LightGBM의 WAPE가 더 낮게 나온 비율이다. 보정하지 않은 비율은 4절의 "
       "'보정 없음' 행에 있다. 미래에 더 나을 확률이 아니다.\n")

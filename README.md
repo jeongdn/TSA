@@ -20,9 +20,9 @@ LOTTE AX Challenge 2026의 '롯데케미칼 첨단소재(ABS·PC·컴파운드) 
 | FRED `MCOILBRENTEU` | 브렌트유 월평균 (EIA) | 키 없는 CSV |
 
 - 2026년 자료가 없는 이유: 한국 월별 자료는 Comtrade에 1년치씩 몰아서 올라옵니다 (2025년치는 2026-05-20 공개). 관세청 공공데이터포털 API는 더 최신이지만 키가 필요해서 이번에는 쓰지 않았습니다.
-- 확인한 품질: 매달 World 행이 상대국 합계와 정확히 같고, 물량 단위는 kg, 추정값 표시가 없습니다. 거래가 없는 달은 행이 빠져 있어 0으로 채웠습니다.
+- 확인한 품질: 매달 World 행이 상대국 합계와 정확히 같고, 물량 단위는 kg, 추정값 표시가 없습니다. 거래가 없는 달은 행이 빠져 있어 0으로 채웠습니다. PC 2017-09·2025-08에는 작은 상대국 행 하나씩(스위스 0.5 kg, 핀란드 800 kg)의 순중량이 비어 있어 그달 World 행까지 비어 있었습니다. 같은 행의 kg 단위 대체 수량(`altQty`)으로 채웠습니다 (4행).
 - 상위 8개국은 첫 검증 기준 시점(2022-02)까지의 24개월 물량으로 골랐습니다. 목록과 비중은 [`outputs/series_info.csv`](outputs/series_info.csv)에 있습니다.
-- 원자료는 저장소에 넣지 않았습니다. `run_all.py`가 처음 실행될 때 받아 `data/raw/`에 저장하고, 파일별 SHA-256은 [`data/manifest.json`](data/manifest.json)에 남깁니다.
+- 원자료는 저장소에 넣지 않았습니다. `run_all.py`가 처음 실행될 때 받아 `data/raw/`에 저장합니다. 동결 때의 원자료는 값만으로 만든 지문 [`data/content_hash.json`](data/content_hash.json)으로 확인합니다. 파일별 SHA-256([`data/manifest.json`](data/manifest.json))은 응답에 서버 처리 시간이 들어 있어 원래 캐시 파일과만 일치합니다.
 
 ### 데이터의 한계
 
@@ -35,6 +35,7 @@ LOTTE AX Challenge 2026의 '롯데케미칼 첨단소재(ABS·PC·컴파운드) 
 7. 국가 합계는 오차가 서로 상쇄돼 고객 단위보다 훨씬 매끈합니다. 등급 x 고객 단위 예측의 WAPE는 이보다 훨씬 높을 가능성이 큽니다.
 8. 테스트는 한 기간(기준 시점 24개, 예측 대상 29개월)뿐이라 불확실성이 큽니다.
 9. 구간 적중률은 경험적 확인입니다. 시계열은 conformal 보장의 전제(교환 가능성)를 만족하지 않습니다.
+10. 테스트 구간이 완전히 '처음 보는' 자료는 아니었습니다. 데이터 경로를 확인하면서 2024~2025년 연간 합계와 2024년 월별 World 물량, 2025-12 World 물량을 봤습니다 ([WORKLOG.md](WORKLOG.md) 3절). 모델 점수는 보지 않았고, 설계는 그 전에 정한 초안과 데이터를 보지 않은 검토 의견을 따랐습니다.
 
 ## 방법
 
@@ -65,7 +66,7 @@ LOTTE AX Challenge 2026의 '롯데케미칼 첨단소재(ABS·PC·컴파운드) 
 ### 평가
 
 - 지표: WAPE(물량 가중), 편향(+는 과대 예측), MASE(계절 나이브 오차 대비, 시리즈 평등). 전체·시점별·제품별·시리즈별.
-- 블록 부트스트랩: 테스트 기준 시점 24개를 길이 6 원형 블록으로 다시 뽑아 10,000번 짝 비교합니다. 블록 수가 적어 생기는 분산 축소를 sqrt(n/(n-b))로 보정했습니다. 주 지표는 'LightGBM의 WAPE가 계절 나이브와 ETS 둘 다보다 낮은 재표집 비율'입니다.
+- 블록 부트스트랩: 테스트 기준 시점 24개를 길이 6 원형 블록으로 다시 뽑아 10,000번 짝 비교합니다. 블록 수가 적어 생기는 분산 축소를 sqrt(n/(n-b))로 보정했습니다. 주 지표는 'LightGBM의 WAPE가 계절 나이브와 ETS 둘 다보다 낮은 재표집 비율'입니다. 검증 구간에서 쓴 P(외부 지표 판단 등)는 기준 시점 12개, 블록 2개로 계산해서 테스트보다 훨씬 거칩니다.
 - 선택 편향: 설정 30개 전부를 (동결 후, 진단용으로만) 테스트에서도 돌려, 고른 설정이 '보통 설정'보다 얼마나 더 나빠졌는지 로그 비율로 쟀습니다.
 - 확률 예측: LightGBM q10·q90 + CQR(아래·위 따로, h별). 검증 구간 오차로 보정한 것이 주, 테스트 중 실제값이 나온 오차를 더해 가는 온라인 보정이 보조입니다.
 - 누수 테스트: [`tests/test_no_leakage.py`](tests/test_no_leakage.py)가 기준 시점 이후 값을 엉터리로 바꿔도 예측이 비트 단위로 같은지 확인합니다.
@@ -91,8 +92,8 @@ LOTTE AX Challenge 2026의 '롯데케미칼 첨단소재(ABS·PC·컴파운드) 
 ### 읽는 법 (숫자는 모두 [RESULTS.md](RESULTS.md)에서 옮김)
 
 1. **LightGBM이 두 기준선보다 나았습니다.** 테스트 WAPE 15.2%로 ETS 16.5%보다 상대적으로 8.2% 낮았습니다 (90% 구간 5.2% ~ 11.2%). 미리 정한 기준(P >= 0.9)을 넘었습니다 (P = 1.000). 기준 시점 24개 중 19개에서 ETS보다 나았고, 연속 6개 기준 시점을 묶은 블록은 모두 LightGBM 쪽이 나았습니다. 그래도 서로 겹치지 않는 6개월 블록은 4개뿐이라 P = 1.000을 '확실하다'로 읽지는 않습니다.
-2. **이득은 먼 시점에서 나왔습니다.** 1개월 앞은 LightGBM과 ETS가 13.7%로 같았고 (P = 0.542), 6개월 앞은 16.3% 대 18.5%였습니다.
-3. **모든 시리즈에서 이긴 것은 아닙니다.** 물량이 가장 큰 ABS-기타(11.8% 대 ETS 9.6%)와 ABS-중국(13.8% 대 12.3%)에서는 ETS가 나았습니다. '기타'를 뺀 16개 국가 시리즈만 보면 LightGBM 16.5%, ETS 19.3%입니다.
+2. **이득은 먼 시점에서 나왔습니다.** 1개월 앞은 LightGBM과 ETS가 13.7%로 같았고 (1개월 앞만 따로 본 블록 3 부트스트랩에서 P = 0.542), 6개월 앞은 16.3% 대 18.5%였습니다.
+3. **모든 시리즈에서 이긴 것은 아닙니다.** 18개 중 4개 시리즈에서 ETS가 나았습니다. 테스트 물량 1위인 ABS-기타(ETS 9.6%, LightGBM 11.8%)와 4위인 ABS-중국(12.3%, 13.8%), 그리고 ABS-멕시코와 PC-헝가리입니다. '기타'를 뺀 16개 국가 시리즈만 보면 LightGBM 16.5%, ETS 19.3%입니다.
 4. **하이퍼파라미터 탐색은 거의 의미가 없었습니다.** 설정 30개의 검증 순위와 테스트 순위의 상관은 -0.120이었고, 검증에서 고른 설정은 테스트에서 24등이었습니다. 다만 사후 1등과의 차이는 0.34%p로 작아서, 어떤 설정을 골라도 결과가 비슷했습니다.
 5. **외부 지표는 규칙대로 뺐습니다.** 검증 구간에서 환율·유가를 넣은 쪽이 나을 P가 0.726이라 쓰지 않았습니다. 사후에 보니 넣은 쪽의 테스트 WAPE가 14.7%로 더 낮았지만, 테스트를 보고 바꾸지 않았습니다.
 6. **구간 보정은 너무 넓어졌습니다.** 보정 전 P10~P90 적중률은 72.5%로 좁았고, 검증 구간 오차로 CQR 보정한 뒤에는 87.8%로 목표 80%를 넘었습니다 (90% 구간 82.8% ~ 92.1%). 검증 구간이 수출 감소기라 아래쪽 경계를 크게 넓혔는데, 테스트 구간에서는 아래로 벗어난 비율이 0.8%뿐이었습니다. 폭과 이탈을 함께 보는 구간 점수는 보정 전(0.727)이 보정 후(0.771)보다 좋았습니다. 보정에 쓰는 기간을 어떻게 고를지가 다음 과제입니다.
@@ -102,19 +103,16 @@ LOTTE AX Challenge 2026의 '롯데케미칼 첨단소재(ABS·PC·컴파운드) 
 
 ## 재현
 
-Windows / Python 3.12, CPU만 씁니다.
+Windows / Python 3.12, CPU만 씁니다. 한 줄로:
 
 ```bash
-python -m venv .venv && .venv/Scripts/python -m pip install --only-binary=:all: -r requirements.txt
+python -m venv .venv && .venv/Scripts/python -m pip install --only-binary=:all: -r requirements.txt && .venv/Scripts/python run_all.py
 ```
 
-```bash
-.venv/Scripts/python run_all.py
-```
-
-- 처음 실행하면 Comtrade 132개월을 받습니다 (약 15~25분, 호출 사이 2초 대기). 이후에는 `data/raw/` 캐시를 씁니다.
-- `frozen.json`이 있으면 검증 단계를 다시 돌려 같은 선택이 나오는지 확인한 뒤, 동결본 그대로 테스트를 채점하고 `RESULTS.md`와 그림을 다시 만듭니다.
-- 단계별: `--stage val`, `--stage final`, `--stage report`. 원자료를 다시 받으려면 `--refresh`.
+- 처음 실행하면 Comtrade 132개월을 받습니다 (약 15~25분, 호출 사이 2초 대기). 이후에는 `data/raw/` 캐시를 씁니다. 모델 계산은 검증 단계 약 5분, 테스트 단계 약 10분입니다.
+- `frozen.json`이 있으면 검증 단계를 다시 돌려 같은 선택(LightGBM 설정, 외부 지표 사용 여부, 앙상블 가중치, 구간 보정폭)이 나오는지 확인합니다. 다르면 멈춥니다. 같으면 동결본으로 테스트를 채점하고 `outputs/results.json`, 그림, `RESULTS.md`, README·SUMMARY의 자동 표를 다시 만듭니다 (커밋된 파일을 덮어씀).
+- 원자료 값이 동결 때와 다르면(Comtrade 수정 등) 경고가 나오고 `RESULTS.md`에도 표시됩니다.
+- 단계별 실행: `--stage val`, `--stage final`, `--stage report`. `final`은 같은 PC에서 먼저 돌린 `val`의 `outputs/val_*` 파일이 필요하고, `report`의 그림과 기준 시점별 승패 문단은 `final`이 만든 예측 파일이 필요합니다 (이 파일들은 커밋하지 않음). 원자료를 다시 받으려면 `--refresh`.
 - 누수 테스트: `.venv/Scripts/python -m tests.test_no_leakage`
 
 ## 폴더
@@ -124,11 +122,12 @@ tsa/            코드 (config, 수집, 패널, 기준선, LightGBM, 부트스�
 tests/          누수 테스트
 frozen.json     검증 단계에서 고정한 선택
 outputs/        결과 JSON, 그림, 시리즈 정보
-data/manifest.json  원자료 파일별 체크섬
+data/content_hash.json  동결 때 원자료 값의 지문
+data/manifest.json      원자료 파일별 체크섬
 ```
 
 ## 출처
 
 - UN Comtrade Database, United Nations Statistics Division. https://comtradeplus.un.org
-- 원/달러 환율 `EXKOUS`: Board of Governors of the Federal Reserve System (H.10), FRED 경유.
+- 원/달러 환율 `EXKOUS`: Board of Governors of the Federal Reserve System (G.5, 일별 값의 월평균), FRED 경유.
 - 브렌트유 `MCOILBRENTEU`: U.S. Energy Information Administration, FRED 경유.

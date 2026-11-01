@@ -1,7 +1,7 @@
 """한 줄 재현: python run_all.py
 
-  --stage val    검증 단계만 (frozen.json이 없으면 만들고, 있으면 다시 고른 결과가 같은지 확인.
-                 frozen.json은 덮어쓰지 않지만 outputs/val_* 파일은 다시 쓴다)
+  --stage val    검증 단계만 (frozen.json이 없으면 만들고, 있으면 다시 고른 결과가 같은지 확인하고
+                 다르면 멈춘다. frozen.json과 data/ 지문은 덮어쓰지 않지만 outputs/val_* 파일은 다시 쓴다)
   --stage final  테스트 단계만 (frozen.json과, 같은 PC에서 먼저 돌린 val 단계의 outputs/val_* 파일 필요)
   --stage report 그림과 RESULTS.md만 다시 만든다
   --stage all    (기본) val -> final -> report
@@ -36,7 +36,9 @@ def main():
             same = all(json.dumps(old[k], sort_keys=True) == json.dumps(frozen[k], sort_keys=True) for k in keys)
             print(f"[val] 동결본과 다시 고른 결과가 같은가: {same}")
             if not same:
-                print("[val] 경고: 다시 고른 결과가 동결본과 다릅니다. final은 동결본(frozen.json)을 그대로 씁니다.")
+                # 다르면 outputs/val_*(온라인 보정에 쓰는 검증 구간 예측)가 동결본과 다른 설정에서 나온 것이 되므로 멈춘다
+                raise SystemExit("[val] 다시 고른 결과가 frozen.json과 다릅니다. 원자료나 라이브러리 버전이 "
+                                 "달라졌을 수 있습니다. 테스트 단계는 돌리지 않습니다 (커밋된 RESULTS.md가 기록입니다).")
         else:
             stages._json(frozen, config.FROZEN_PATH)
             print("[val] frozen.json을 썼습니다. 커밋하고 'freeze' 태그를 단 뒤 --stage final을 실행하세요.")

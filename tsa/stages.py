@@ -41,6 +41,14 @@ def load(refresh=False):
     return D
 
 
+def content_hash(D):
+    """원자료의 '값'만으로 만든 지문. 응답에 들어 있는 서버 처리 시간이나 FRED의 새 달처럼
+    값과 무관한 차이에는 바뀌지 않아서, 새로 받은 자료가 동결 때와 같은 값인지 확인할 수 있다."""
+    df = D.df.sort_values(["period", "hs", "partner"])[["period", "hs", "partner", "kg", "usd"]]
+    text = df.astype(str).to_csv(index=False) + D.ext.loc[:config.END].astype(str).to_csv()
+    return hashlib.sha256(text.encode()).hexdigest()
+
+
 def run_baselines(D, origins):
     out, fails = [], 0
     for T in origins:
@@ -182,8 +190,10 @@ def stage_val(D):
                "intervals_reordered_share": float(iv["reordered"].mean())}
     pd.concat(fcs.values(), ignore_index=True).to_csv(OUT / "val_forecasts.csv.gz", index=False)
     iv[IV_COLS].to_csv(OUT / "val_intervals.csv.gz", index=False)
-    _json(manifest, config.ROOT / "data" / "manifest.json")
     _json(summary, OUT / "val_summary.json")
+    if not config.FROZEN_PATH.exists():     # 동결할 때만 원자료 지문을 남긴다 (다시 돌릴 때는 덮어쓰지 않음)
+        _json(manifest, config.ROOT / "data" / "manifest.json")
+        _json({"sha256": content_hash(D)}, config.ROOT / "data" / "content_hash.json")
     return frozen
 
 
@@ -193,10 +203,14 @@ def stage_final(D):
         raise SystemExit("frozen.json이 없습니다. 먼저 `python run_all.py --stage val`로 만들고 커밋하세요.")
     F = json.loads(config.FROZEN_PATH.read_text(encoding="utf-8"))
     assert F["series"] == list(D.series), "시리즈 구성이 동결 때와 다릅니다"
-    manifest = {"comtrade": data_comtrade.manifest(), "fred": data_fred.manifest()}
-    same_data = hashlib.sha256(json.dumps(manifest, sort_keys=True).encode()).hexdigest() == F["data"]["manifest_sha256"]
+    ch_path = config.ROOT / "data" / "content_hash.json"
+    if ch_path.exists():      # 값 기준 지문 (새로 받아도 값이 같으면 일치)
+        same_data = content_hash(D) == json.loads(ch_path.read_text(encoding="utf-8"))["sha256"]
+    else:                     # 파일 기준 지문 (원래 캐시 파일과만 일치)
+        manifest = {"comtrade": data_comtrade.manifest(), "fred": data_fred.manifest()}
+        same_data = hashlib.sha256(json.dumps(manifest, sort_keys=True).encode()).hexdigest() == F["data"]["manifest_sha256"]
     if not same_data:
-        print("[final] 경고: 원자료가 동결 때와 다릅니다 (다시 받았거나 Comtrade가 수정함). 숫자가 RESULTS.md와 다를 수 있습니다.")
+        print("[final] 경고: 원자료 값이 동결 때와 다릅니다 (Comtrade 수정 등). 숫자가 RESULTS.md와 다를 수 있습니다.")
     test = D.test_idx
     print(f"[final] 기준 시점 {D.months[test[0]]} ~ {D.months[test[-1]]} ({len(test)}개)")
     params, features = F["lgbm"]["params"], F["lgbm"]["features"]

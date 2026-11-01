@@ -3,11 +3,15 @@
 실행: python -m tests.test_no_leakage   (pytest로 돌려도 된다)
 검사하는 것
 1. 상위국 선정: 선정 기간(2022-02) 이후 물량을 바꿔도 같은 나라가 뽑힌다.
-2. 학습 행: 기준 시점 T에서 쓰는 학습 행의 목표 월이 모두 T 이하다.
+2. 학습 행 필터: 't+h <= T' 필터가 목표 월 T 이하만 남긴다 (필터 자체의 재확인일 뿐이다.
+   실제 학습에 미래 행이 들어가지 않는다는 근거는 3번이다).
 3. 예측: 계절 나이브, 12개월 평균, ETS, LightGBM(점, q10, q90), MASE 분모, 구간 규모가
-   T 이후 물량·환율·유가를 바꿔도 비트 단위로 같다.
+   T 이후 물량·환율·유가를 바꿔도 비트 단위로 같다. LightGBM은 동결한 설정과 다른 설정 하나로 확인한다.
 4. 온라인 conformal: 목표 월이 T보다 뒤인 점수를 바꿔도 보정폭이 같다.
+한계: 기준 시점 두 개(검증 첫 시점, 테스트 여섯 번째 시점)에서만 확인한다.
 """
+import json
+
 import numpy as np
 import pandas as pd
 
@@ -15,11 +19,13 @@ from tsa import backtest, baselines, config, conformal, lgbm, panel, stages
 
 
 def poisoned(D, T):
-    """T 이후 물량을 10배 + 12345로, 환율·유가를 7배로 바꾼 사본."""
+    """T 이후 물량을 10배 + 12345로, 환율·유가를 달마다 다른 배수(2~9배)로 바꾼 사본.
+    달마다 배수가 달라서 T 이후 두 달 사이의 변화율까지 바뀐다."""
     Y = D.Y.copy()
     Y[:, T + 1:] = Y[:, T + 1:] * 10 + 12345
     ext = D.ext.copy()
-    ext.loc[ext.index > D.months[T]] *= 7
+    late = ext.index > D.months[T]
+    ext.loc[late] = ext.loc[late].to_numpy() * np.random.default_rng(T).uniform(2, 9, size=(late.sum(), 2))
     return Y, ext
 
 
@@ -35,7 +41,9 @@ def test_no_leakage():
     _, info_p = panel.build(df)
     assert list(info_p["series"]) == list(D.info["series"]), "상위국 선정이 미래 값에 따라 바뀜"
 
-    params = lgbm.sample_configs(1, config.SEED)[0]
+    param_sets = [lgbm.sample_configs(1, config.SEED)[0]]
+    if config.FROZEN_PATH.exists():
+        param_sets.append(json.loads(config.FROZEN_PATH.read_text(encoding="utf-8"))["lgbm"]["params"])
     feats = lgbm.BASE_FEATURES + lgbm.EXT_FEATURES
     for T in [D.val_idx[0], D.test_idx[5]]:
         Yp, extp = poisoned(D, T)
@@ -51,10 +59,11 @@ def test_no_leakage():
         assert np.array_equal(baselines.ets(D.Y, T)[0], baselines.ets(Yp, T)[0]), "ETS"
         assert np.array_equal(backtest.mase_scale(D.Y, T), backtest.mase_scale(Yp, T))
         assert np.array_equal(backtest.origin_scale(D.Y, T), backtest.origin_scale(Yp, T))
-        for obj, a in [("l1", None), ("quantile", 0.1), ("quantile", 0.9)]:
-            p1, _ = lgbm.fit_predict(D.rows, T, params, feats, obj, a)
-            p2, _ = lgbm.fit_predict(rows_p, T, params, feats, obj, a)
-            assert np.array_equal(p1["yhat"].to_numpy(), p2["yhat"].to_numpy()), f"LightGBM {obj} {a}"
+        for params in param_sets:
+            for obj, a in [("l1", None), ("quantile", 0.1), ("quantile", 0.9)]:
+                p1, _ = lgbm.fit_predict(D.rows, T, params, feats, obj, a)
+                p2, _ = lgbm.fit_predict(rows_p, T, params, feats, obj, a)
+                assert np.array_equal(p1["yhat"].to_numpy(), p2["yhat"].to_numpy()), f"LightGBM {obj} {a}"
         print(f"  기준 시점 {D.months[T]}: 통과")
 
     # 4) 온라인 conformal: 목표 월이 T 뒤인 점수는 쓰지 않아야 한다
