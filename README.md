@@ -1,7 +1,7 @@
 # ABS·PC 수출 수요예측 연습 (공개 데이터)
 
 한국의 ABS·PC 월별 수출 물량을 상대국별로 1~6개월 앞까지 예측하고, 그 결과를 **미리 정해 둔 절차로 정직하게 평가**한 연습 프로젝트입니다.
-LOTTE AX Challenge 2026의 '롯데케미칼 첨단소재(ABS·PC·컴파운드) 수요예측 AI' 과제에 지원하면서, 지원서에 쓴 설계(기준선 → 글로벌 LightGBM → 롤링 백테스트 → 부트스트랩 → 확률 예측)를 공개 데이터로 직접 확인해 보려고 만들었습니다.
+LOTTE AX Challenge 2026의 '롯데케미칼 첨단소재(ABS·PC·컴파운드) 수요예측 AI' 과제에 지원하면서, 지원서에 쓴 설계(기준선 → 글로벌 LightGBM → 롤링 백테스트 → 부트스트랩 → 확률 예측)를 공개 데이터로 직접 확인해 보려고 만들었습니다. 이어서 제품 합계·전체 합계를 맞추는 계층 조정과, 결과 숫자만 인용하는 작은 질의응답 에이전트를 붙였습니다 ([7번](#7번-합계-맞추기와-질의응답-에이전트)).
 
 > **실제 판매 데이터가 아닙니다.** 한국 전체 수출 통계(UN Comtrade)이고, 롯데케미칼의 등급 x 고객 데이터와는 다릅니다. 이 저장소의 정확도 숫자는 그대로 옮겨 갈 수 없고, 옮겨 갈 수 있는 것은 **평가 방법**입니다. 한계는 [아래](#데이터의-한계)에 정리했습니다.
 
@@ -44,10 +44,10 @@ LOTTE AX Challenge 2026의 '롯데케미칼 첨단소재(ABS·PC·컴파운드) 
 | 구간 | 기준 시점 | 예측 대상 월 | 쓰임 |
 |---|---|---|---|
 | 상위국 선정 | 2020-03 ~ 2022-02의 물량 | - | 제품별 상위 8개국 |
-| 검증 | 2022-02 ~ 2023-01 (12개) | 2022-03 ~ 2023-07 | LightGBM 설정, 외부 지표 사용 여부, 앙상블 가중치, 구간 보정폭 선택 |
-| 테스트 | 2023-07 ~ 2025-06 (24개) | 2023-08 ~ 2025-12 | `frozen.json` 고정 후 한 번만 채점 |
+| 검증 | 2022-02 ~ 2023-01 (12개) | 2022-03 ~ 2023-07 | LightGBM 설정, 외부 지표 사용 여부, 앙상블 가중치, 구간 보정폭 선택. 7번에서는 합계 맞추는 방법 선택 |
+| 테스트 | 2023-07 ~ 2025-06 (24개) | 2023-08 ~ 2025-12 | `frozen.json`(7번은 `frozen_mint.json`) 고정 후 한 번만 채점 |
 
-검증에서 고른 것은 모두 [`frozen.json`](frozen.json)에 쓰고 git 태그 `freeze`를 단 뒤에만 테스트를 돌렸습니다. `run_all.py --stage final`은 이 파일이 없으면 실행되지 않습니다.
+검증에서 고른 것은 모두 [`frozen.json`](frozen.json)에 쓰고 git 태그 `freeze`를 단 뒤에만 테스트를 돌렸습니다. `run_all.py --stage final`은 이 파일이 없으면 실행되지 않습니다. 7번의 계층 조정도 같은 방식으로 [`frozen_mint.json`](frozen_mint.json)과 태그 `freeze-mint` 뒤에 한 번 채점했습니다.
 
 ### 모델
 
@@ -101,6 +101,31 @@ LOTTE AX Challenge 2026의 '롯데케미칼 첨단소재(ABS·PC·컴파운드) 
 
 그 밖의 그림: [기준 시점별 차이](outputs/figures/fig_origin_diff.png), [선택 편향](outputs/figures/fig_selection_bias.png), [1개월 앞 예측과 P10~P90](outputs/figures/fig_fan.png).
 
+## 7번: 합계 맞추기와 질의응답 에이전트
+
+### 계층 조정 (제품 합계·전체 합계 맞추기)
+
+하위 18개 예측을 더한 값이 제품 합계·전체 합계 예측과 같아지도록 맞췄습니다. 계층은 전체 -> ABS, PC -> 하위 18개(노드 21개)입니다. 합계 노드의 기준 예측은 합계 시리즈에 AutoETS를 직접 적합했고, 하위는 동결한 LightGBM을 썼습니다. 이대로는 합이 맞지 않습니다. 테스트에서 합계 노드 예측과 하위 예측 합의 차이가 실제 물량의 3.5% ~ 5.5%였습니다.
+
+- 후보는 MinT(축소 추정)입니다. 노드 간 예측 오차의 공분산 W로 21개 기준 예측을 가중 결합합니다 ([`tsa/hierarchy.py`](tsa/hierarchy.py)). 비교용으로 BU(하위 예측의 합), OLS, WLS도 계산했습니다.
+- 선택 규칙은 테스트 전에 고정했습니다. 기본값은 가장 단순한 BU입니다. W를 검증 오차로 추정하는데 같은 구간에서 평가하면 낙관적이어서, 검증 기준 시점 12개를 앞뒤 6개로 나눈 2겹 교차 적합으로 평가했습니다. P(MinT가 전체·제품·하위 모두에서 BU보다 나음) >= 0.9일 때만 MinT를 쓰기로 했습니다.
+- 교차 적합 P = 0.083이라 **BU를 채택**했습니다. 같은 구간으로 추정·평가하면 MinT의 하위 WAPE가 19.3%(BU 23.7%)로 좋아 보였는데, 교차 적합에서는 24.7%였습니다.
+- 테스트(한 번 채점): BU는 합계를 ETS로 직접 예측한 것보다 나았습니다. 전체 WAPE는 8.1% -> 7.3%(P = 0.932), 제품 합계는 9.6% -> 8.4%(P = 0.982)였고, 하위는 15.2% 그대로입니다. MinT는 하위 WAPE가 16.3%로 BU보다 나빴고(P(MinT < BU) = 0.007) 편향이 -3.3%였습니다. 수출 감소기였던 검증 구간의 오차로 만든 W가 예측을 아래로 끌어내린 것으로 봅니다. 하위도 ETS인 고전적 설정에서는 MinT가 BU와 비슷하거나 조금 나았습니다(하위 16.4% vs 16.5%, 세 수준 모두 나을 P = 0.535).
+- 표 전체: [RESULTS.md](RESULTS.md) 10절. 마지막 자료 월(2025-12) 기준 2026-01 ~ 06 예측도 같은 방법(BU, 동결한 설정)으로 만들었습니다 (`--stage forecast`, 실제값이 아직 없어 채점하지 않음).
+
+### 질의응답 에이전트
+
+OpenAI 호환 API(`/chat/completions`의 도구 호출)로 결과를 묻고 답하는 작은 에이전트입니다 ([`ask.py`](ask.py), [`tsa/qa_agent.py`](tsa/qa_agent.py)). HTTP 요청은 표준 라이브러리로 보내서, 주소만 바꾸면 OpenAI든 로컬 Ollama든 같은 코드로 돕니다.
+
+- 도구는 두 개이고, 둘 다 저장된 결과 파일만 읽습니다 ([`tsa/qa_tools.py`](tsa/qa_tools.py)).
+  - `get_forecast(series, origin, h)`: 2026-01 ~ 06 예측(P10·P90 포함), 또는 테스트 기준 시점 하나의 예측과 실제값.
+  - `get_backtest(series, h)`: 모델별 WAPE·편향·MASE, 부트스트랩 P, 구간 적중률, 계층 조정 결과.
+- 숫자 검사([`tsa/numcheck.py`](tsa/numcheck.py))는 답변의 숫자가 모두 도구 결과나 질문에 있는지 확인합니다. 허용하는 것은 반올림, 부호 생략, 확률을 %로 쓴 것, 'YYYY년 M월' 표기뿐입니다. 근거 없는 숫자가 있으면 그 숫자를 알려 주고 한 번 다시 쓰게 하고, 그래도 남으면 경고와 함께 실패로 표시합니다. 한계도 있습니다. 같은 값이 도구 결과 어딘가에 있으면 통과하므로, 어느 항목과 맞았는지를 함께 출력합니다.
+- 설정: [`.env.example`](.env.example)을 `.env`로 복사해 `OPENAI_BASE_URL`, `OPENAI_API_KEY`, `OPENAI_MODEL`을 채웁니다 (`.env`는 커밋되지 않습니다).
+- 실행: `python ask.py "중국으로 가는 ABS 수출의 2026년 1~3월 예측은?"`. 미리 정한 질문 10개로 평가하려면 `python ask.py --eval`을 씁니다 (결과는 RESULTS.md 11절).
+- LLM 없이 도는 테스트: [`tests/test_agent.py`](tests/test_agent.py). 대본대로 답하는 가짜 모델로 재시도 흐름을 보고, 로컬 가짜 서버로 HTTP 경로를 확인합니다.
+- 실제 LLM으로 돌린 평가는 아직 없습니다 (LLM 연결이 필요합니다).
+
 ## 재현
 
 Windows / Python 3.12, CPU만 씁니다. 한 줄로:
@@ -112,15 +137,21 @@ python -m venv .venv && .venv/Scripts/python -m pip install --only-binary=:all: 
 - 처음 실행하면 Comtrade 132개월을 받습니다 (약 15~25분, 호출 사이 2초 대기). 이후에는 `data/raw/` 캐시를 씁니다. 모델 계산은 검증 단계 약 5분, 테스트 단계 약 10분입니다.
 - `frozen.json`이 있으면 검증 단계를 다시 돌려 같은 선택(LightGBM 설정, 외부 지표 사용 여부, 앙상블 가중치, 구간 보정폭)이 나오는지 확인합니다. 다르면 멈춥니다. 같으면 동결본으로 테스트를 채점하고 `outputs/results.json`, 그림, `RESULTS.md`, README·SUMMARY의 자동 표를 다시 만듭니다 (커밋된 파일을 덮어씀).
 - 원자료 값이 동결 때와 다르면(Comtrade 수정 등) 경고가 나오고 `RESULTS.md`에도 표시됩니다.
-- 단계별 실행: `--stage val`, `--stage final`, `--stage report`. `final`은 같은 PC에서 먼저 돌린 `val`의 `outputs/val_*` 파일이 필요하고, `report`의 그림과 기준 시점별 승패 문단은 `final`이 만든 예측 파일이 필요합니다 (이 파일들은 커밋하지 않음). 원자료를 다시 받으려면 `--refresh`.
-- 누수 테스트: `.venv/Scripts/python -m tests.test_no_leakage`
+- 단계별 실행: `--stage val`, `--stage final`, `--stage mint`, `--stage forecast`, `--stage report`. `final`은 같은 PC에서 먼저 돌린 `val`의 `outputs/val_*` 파일이 필요하고, `mint`는 `val`·`final`의 예측 파일이, `report`의 그림과 기준 시점별 승패 문단은 `final`이 만든 예측 파일이 필요합니다 (이 파일들은 커밋하지 않음). 원자료를 다시 받으려면 `--refresh`.
+- `mint`는 `frozen_mint.json`이 있으면 검증 구간에서 방법을 다시 정해 같은지 확인한 뒤 테스트를 채점하고, 다르면 멈춥니다. `forecast`는 마지막 자료 월 기준 예측을 `outputs/forecast_latest.csv.gz`에 씁니다.
+- 테스트: `.venv/Scripts/python -m tests.test_no_leakage` (누수), `-m tests.test_hierarchy` (계층 조정), `-m tests.test_agent` (에이전트, LLM 없이)
+- 에이전트: `.venv/Scripts/python ask.py "질문"` (`.env` 설정 필요, 위 7번 절)
 
 ## 폴더
 
 ```
-tsa/            코드 (config, 수집, 패널, 기준선, LightGBM, 부트스트랩, conformal, 단계, 보고서)
-tests/          누수 테스트
+tsa/            코드 (config, 수집, 패널, 기준선, LightGBM, 부트스트랩, conformal, 계층 조정, 단계, 보고서,
+                에이전트 도구·숫자 검사·에이전트)
+tests/          누수·계층 조정·에이전트 테스트, 에이전트 평가 질문
+ask.py          질의응답 에이전트 실행
 frozen.json     검증 단계에서 고정한 선택
+frozen_mint.json  7번 계층 조정 방법 선택
+.env.example    에이전트 설정 예시 (.env로 복사해 채움, .env는 커밋 안 함)
 outputs/        결과 JSON, 그림, 시리즈 정보
 data/content_hash.json  동결 때 원자료 값의 지문
 data/manifest.json      원자료 파일별 체크섬
