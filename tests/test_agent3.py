@@ -118,6 +118,18 @@ def test_guard_text_is_not_removed():
     assert out["guard"] and out["answer"] == f"{qa_agent3.REFUSE} {qa_facts.RANGE}" and out["shown_ok"], out["answer"]
 
 
+def test_other_product_guard():
+    """자료에 없는 제품(PP)을 물었는데 모델이 ABS+PC 전체 값을 골라도 '답할 수 없음'과 자료 범위 안내로 바뀐다.
+    ABS·PC 질문에는 이 장치가 걸리지 않는다."""
+    pick_first = lambda m: final([last_facts(m)[0]["id"]])  # noqa: E731
+    llm = Scripted([call("get_forecast", {"series": "TOTAL"}), pick_first])
+    out = qa_agent3.ask("폴리프로필렌(PP) 수출은 2026년 상반기에 얼마나 될까요?", llm)
+    assert out["guard"] and out["answer"] == f"{qa_agent3.REFUSE} {qa_facts.SCOPE}" and out["shown_ok"]
+    llm = Scripted([call("get_forecast", {"series": "PC-USA", "h": [1]}), pick_first])
+    out = qa_agent3.ask("미국으로 가는 PC 수출의 2026-01 예측은?", llm)
+    assert out["guard"] is None and "PC-미국(PC-USA)" in out["answer"]
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):
