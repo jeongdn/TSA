@@ -439,13 +439,30 @@ def agent_md(A):
          f"- 답변 속 숫자 중 근거 없는 숫자: 첫 답변 {A['unsupported_first_try']}개 / {A['numbers_first_try']}개, "
          f"최종 {A['unsupported_final']}개 / {A['numbers_final']}개"
          + (f"\n- 가장 긴 요청의 입력 토큰 수: {A['max_prompt_tokens']:,} (로컬 서버의 문맥 길이보다 작아야 앞부분이 "
-            "잘리지 않는다)" if A.get("max_prompt_tokens") else "") + "\n",
-         "| 질문 | 부른 도구 | 첫 답변 | 최종 | 근거 없던 숫자 (첫 답변) |", "|---|---|---|---|---|"]
+            "잘리지 않는다)" if A.get("max_prompt_tokens") else ""),
+         ]
+    sr = A.get("semantic_review")
+    if sr:
+        L.append(f"- 뜻 검토 ({sr['reviewer']}): 숫자 검사가 못 보는 것(숫자를 맞는 항목에 붙였는지, '나았다' 같은 주장이 "
+                 f"도구 결과와 맞는지, 질문에 답했는지)을 답변마다 다시 봤다. 주장이 모두 도구 결과와 맞고 질문에도 답한 "
+                 f"최종 답변 {sr['faithful']}/{n}, 숫자 검사는 통과했지만 뜻 검토에서 걸린 답변 "
+                 f"{sr['passed_numbers_but_unfaithful']}개. 항목별: 주장이 모두 맞음 {sr['claims_faithful']}/{n}, "
+                 f"질문에 답함 {sr['answers_question']}/{n}, 알맞은 도구·인자 {sr['right_tool_and_args']}/{n}, "
+                 f"한국어로만 답함 {sr['korean_only']}/{n}.")
+    L.append("")
+    head = "| 질문 | 부른 도구 | 첫 답변 | 최종 | 근거 없던 숫자 (첫 답변) |" + (" 뜻 검토 |" if sr else "")
+    L += [head, "|---|---|---|---|---|" + ("---|" if sr else "")]
     for q in A["questions"]:
         tools = ", ".join(q["called_tools"]) or "-"
-        L.append(f"| {q['question']} | {tools} | {'통과' if q['first_try_ok'] else '실패'} | "
-                 f"{'통과' if q['final_ok'] else '실패'} | {', '.join(q['unsupported_first']) or '-'} |")
-    L.append("\n숫자 검사는 '답변의 숫자가 도구 결과 어딘가에 있는가'만 본다. 맞는 항목과 짝지었는지까지는 확인하지 않는다.")
+        row = (f"| {q['question']} | {tools} | {'통과' if q['first_try_ok'] else '실패'} | "
+               f"{'통과' if q['final_ok'] else '실패'} | {', '.join(q['unsupported_first']) or '-'} |")
+        if sr:
+            v = sr["by_id"].get(q["id"], {})
+            row += f" {'맞음' if v.get('faithful') else '문제: ' + v.get('summary_ko', '-')} |"
+        L.append(row)
+    L.append("\n숫자 검사는 '답변의 숫자가 도구 결과 어딘가에 있는가'만 본다. 맞는 항목과 짝지었는지까지는 확인하지 않는다"
+             + (" (그래서 뜻 검토를 따로 했다. 검토자도 AI라 사람이 다시 볼 수 있게 답변 전문은 outputs/cache/에 남겼다)."
+                if sr else "."))
     return "\n".join(L) + "\n"
 
 

@@ -1,0 +1,304 @@
+{
+  "created": "2026-11-02T00:45:43",
+  "model": "qwen2.5:7b",
+  "endpoint_host": "localhost:11434",
+  "n_questions": 10,
+  "first_try_ok": 10,
+  "final_ok": 10,
+  "tool_choice_ok": 8,
+  "numbers_first_try": 23,
+  "numbers_final": 23,
+  "unsupported_first_try": 0,
+  "unsupported_final": 0,
+  "max_prompt_tokens": 1908,
+  "questions": [
+    {
+      "id": "overall",
+      "question": "LightGBM은 기준선보다 얼마나 나았나요?",
+      "expect_tools": [
+        "get_backtest"
+      ],
+      "called_tools": [
+        "get_backtest"
+      ],
+      "tool_choice_ok": true,
+      "first_try_ok": true,
+      "final_ok": true,
+      "attempts": 1,
+      "n_numbers_first": 5,
+      "n_numbers_final": 5,
+      "unsupported_first": [],
+      "unsupported_final": [],
+      "max_prompt_tokens": 1908
+    },
+    {
+      "id": "h1",
+      "question": "1개월 앞 예측만 보면 LightGBM이 ETS보다 나았나요?",
+      "expect_tools": [
+        "get_backtest"
+      ],
+      "called_tools": [
+        "get_forecast"
+      ],
+      "tool_choice_ok": false,
+      "first_try_ok": true,
+      "final_ok": true,
+      "attempts": 1,
+      "n_numbers_first": 2,
+      "n_numbers_final": 2,
+      "unsupported_first": [],
+      "unsupported_final": [],
+      "max_prompt_tokens": 1180
+    },
+    {
+      "id": "coverage",
+      "question": "P10~P90 구간은 목표만큼 실제값을 담았나요?",
+      "expect_tools": [
+        "get_backtest"
+      ],
+      "called_tools": [
+        "get_backtest"
+      ],
+      "tool_choice_ok": true,
+      "first_try_ok": true,
+      "final_ok": true,
+      "attempts": 1,
+      "n_numbers_first": 0,
+      "n_numbers_final": 0,
+      "unsupported_first": [],
+      "unsupported_final": [],
+      "max_prompt_tokens": 1271
+    },
+    {
+      "id": "series_oth",
+      "question": "ABS 기타 국가(ABS-OTH) 시리즈에서는 어떤 모델이 가장 좋았나요?",
+      "expect_tools": [
+        "get_backtest"
+      ],
+      "called_tools": [
+        "get_backtest"
+      ],
+      "tool_choice_ok": true,
+      "first_try_ok": true,
+      "final_ok": true,
+      "attempts": 1,
+      "n_numbers_first": 0,
+      "n_numbers_final": 0,
+      "unsupported_first": [],
+      "unsupported_final": [],
+      "max_prompt_tokens": 1194
+    },
+    {
+      "id": "mint",
+      "question": "제품 합계와 전체 합계를 맞출 때 MinT 대신 BU를 쓴 이유는 무엇인가요?",
+      "expect_tools": [
+        "get_backtest"
+      ],
+      "called_tools": [],
+      "tool_choice_ok": false,
+      "first_try_ok": true,
+      "final_ok": true,
+      "attempts": 1,
+      "n_numbers_first": 0,
+      "n_numbers_final": 0,
+      "unsupported_first": [],
+      "unsupported_final": [],
+      "max_prompt_tokens": 988
+    },
+    {
+      "id": "fc_abs_chn",
+      "question": "중국으로 가는 ABS 수출의 2026년 1~3월 예측을 알려 주세요.",
+      "expect_tools": [
+        "get_forecast"
+      ],
+      "called_tools": [
+        "get_forecast"
+      ],
+      "tool_choice_ok": true,
+      "first_try_ok": true,
+      "final_ok": true,
+      "attempts": 1,
+      "n_numbers_first": 2,
+      "n_numbers_final": 2,
+      "unsupported_first": [],
+      "unsupported_final": [],
+      "max_prompt_tokens": 1052
+    },
+    {
+      "id": "fc_pc",
+      "question": "PC 전체 수출은 앞으로 6개월 동안 어떻게 예측되나요?",
+      "expect_tools": [
+        "get_forecast"
+      ],
+      "called_tools": [
+        "get_forecast"
+      ],
+      "tool_choice_ok": true,
+      "first_try_ok": true,
+      "final_ok": true,
+      "attempts": 1,
+      "n_numbers_first": 5,
+      "n_numbers_final": 5,
+      "unsupported_first": [],
+      "unsupported_final": [],
+      "max_prompt_tokens": 1174
+    },
+    {
+      "id": "fc_total",
+      "question": "ABS와 PC를 합친 전체 수출의 2026-01 예측은 얼마인가요?",
+      "expect_tools": [
+        "get_forecast"
+      ],
+      "called_tools": [
+        "get_forecast"
+      ],
+      "tool_choice_ok": true,
+      "first_try_ok": true,
+      "final_ok": true,
+      "attempts": 1,
+      "n_numbers_first": 2,
+      "n_numbers_final": 2,
+      "unsupported_first": [],
+      "unsupported_final": [],
+      "max_prompt_tokens": 1495
+    },
+    {
+      "id": "past_origin",
+      "question": "2024-06 기준 시점에서 미국으로 가는 PC 수출을 1개월 앞으로 얼마로 예측했고, 실제는 얼마였나요?",
+      "expect_tools": [
+        "get_forecast"
+      ],
+      "called_tools": [
+        "get_forecast"
+      ],
+      "tool_choice_ok": true,
+      "first_try_ok": true,
+      "final_ok": true,
+      "attempts": 1,
+      "n_numbers_first": 5,
+      "n_numbers_final": 5,
+      "unsupported_first": [],
+      "unsupported_final": [],
+      "max_prompt_tokens": 1750
+    },
+    {
+      "id": "no_data",
+      "question": "2027년 중국 ABS 수출은 얼마나 될까요?",
+      "expect_tools": [],
+      "called_tools": [
+        "get_forecast"
+      ],
+      "tool_choice_ok": true,
+      "first_try_ok": true,
+      "final_ok": true,
+      "attempts": 1,
+      "n_numbers_first": 2,
+      "n_numbers_final": 2,
+      "unsupported_first": [],
+      "unsupported_final": [],
+      "max_prompt_tokens": 1232
+    }
+  ],
+  "semantic_review": {
+    "reviewer": "독립 검토 에이전트(Claude) 2개 관점 x 답변 10개: 주장별 사실 확인, 질문에 답했는지·도구 사용",
+    "definition": "통과 = 두 검토자 모두 모든 주장이 그 답변의 도구 결과와 맞다고 보고, 질문에도 답했다고 본 경우",
+    "faithful": 3,
+    "passed_numbers_but_unfaithful": 7,
+    "claims_faithful": 3,
+    "answers_question": 3,
+    "right_tool_and_args": 5,
+    "korean_only": 9,
+    "by_id": {
+      "overall": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "8.2%는 ETS 대비 WAPE 감소율인데 기준선 전체 감소율처럼 썼고 계절 나이브 대비 25.6%는 빠짐"
+      },
+      "h1": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": false,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "1개월 앞 정확도 비교 질문에 미래 예측값만 조회해 LightGBM·ETS 우열을 답하지 못하고 근거 없는 호출법을 권함"
+      },
+      "coverage": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": false,
+        "korean_only": true,
+        "lenses_agree_on_claims": false,
+        "summary_ko": "인자 없는 get_backtest 대신 TOTAL·h=6만 두 번 호출해 적중률을 못 찾음"
+      },
+      "series_oth": {
+        "faithful": true,
+        "claims_faithful": true,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "문제 없음"
+      },
+      "mint": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": false,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "도구를 한 번도 부르지 않고 도구 결과에 없다며 답을 거부함(get_backtest 미호출)"
+      },
+      "fc_abs_chn": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": false,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "h에 목록 [1,2,3]을 넘긴 자기 오류를 사용자 입력 탓으로 돌리고 예측값을 주지 않음"
+      },
+      "fc_pc": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": false,
+        "korean_only": false,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "2026-06 한 달 예측 53,108톤을 6개월 전체 값처럼 말했고 답 대부분이 중국어다"
+      },
+      "fc_total": {
+        "faithful": true,
+        "claims_faithful": true,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "문제 없음"
+      },
+      "past_origin": {
+        "faithful": true,
+        "claims_faithful": true,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "문제 없음"
+      },
+      "no_data": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "2026-06 한 달 예측 11826.3톤을 도구 범위 밖인 2027년 수출로 답함"
+      }
+    }
+  }
+}
