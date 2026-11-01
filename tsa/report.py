@@ -20,6 +20,9 @@ INK, INK2, GRID, SURFACE = "#0b0b0b", "#52514e", "#e4e3df", "#fcfcfb"
 NAME = {"SNaive": "계절 나이브", "Mean12": "12개월 평균", "ETS": "ETS", "LGBM": "LightGBM",
         "Ensemble": "앙상블(검증 가중치)", "Ensemble_eq": "앙상블(1/3씩)"}
 IV_NAME = {"raw": "분위수 (보정 전)", "static": "CQR (검증 구간 보정)", "online": "CQR (온라인 보정)"}
+METHOD_NAME = {"Base": "조정 전 (합이 안 맞음)", "BU": "BU (하위 예측의 합)", "OLS": "OLS", "WLS_struct": "WLS (구조)",
+               "WLS_var": "WLS (분산)", "MinT_shrink": "MinT (축소 추정)"}
+LEVEL_KO = {"total": "전체", "product": "제품 합계", "bottom": "하위 18개"}
 
 
 def _load(name):
@@ -370,6 +373,80 @@ def results_md(R, V, F, wins=None):
     return "\n".join(L) + "\n"
 
 
+def mint_md(M, MV, FM):
+    """10절: 계층 조정. mint_results.json(테스트), mint_val.json(검증), frozen_mint.json(방법 선택)에서 만든다."""
+    L = []
+    w = L.append
+    lv = ["total", "product", "bottom"]
+    g, mt, b = FM["gate"], M["metrics"]["LGBM"], M["bootstrap"]["LGBM"]
+    w("\n## 10. 계층 조정 (7번: 제품 합계·전체 합계 맞추기)\n")
+    w("- 계층: 전체 -> ABS, PC -> 하위 18개 (노드 21개). 합계 노드의 기준 예측은 합계 시리즈에 직접 적합한 AutoETS, "
+      "하위는 동결한 LightGBM이다. 따로 만든 예측이라 그대로는 합이 맞지 않는다.")
+    gap = M["coherence_gap_base"]["LGBM"]
+    w(f"- 조정 전 불일치 (테스트, sum|합계 노드 예측 - 하위 예측의 합| / sum 실제값): 전체 {_p(gap['TOTAL'])}, "
+      f"ABS {_p(gap['ABS'])}, PC {_p(gap['PC'])}")
+    w(f"- 방법 선택 (검증 구간): 후보 MinT(축소 추정), 기본값 BU. frozen_mint.json 작성 {FM['created']}, 태그 "
+      f"`freeze-mint` = 커밋 `{_git('freeze-mint^{commit}')}`, 테스트 채점은 그 뒤 한 번. 검증 기준 시점 12개를 앞뒤 6개로 "
+      f"나눈 2겹 교차 적합에서 P(MinT가 전체·제품·하위 모두에서 BU보다 나음) = {g['p_better_all']:.3f} "
+      f"-> **{FM['adopted']} 채택** (기준 0.9).")
+    ins, cf = MV["in_sample"], MV["cross_fit"]
+    w(f"- W를 같은 검증 구간 오차로 추정하고 같은 구간에서 평가하면 MinT의 하위 WAPE가 "
+      f"{_p(ins['MinT_shrink']['bottom']['WAPE'])} (BU {_p(ins['BU']['bottom']['WAPE'])})로 좋아 보였지만, "
+      f"교차 적합에서는 {_p(cf['MinT_shrink']['bottom']['WAPE'])}로 BU보다 나빴다.\n")
+    w("| 방법 (테스트, 하위 기준 예측 = LightGBM) | 전체 WAPE | 제품 합계 WAPE | 하위 18개 WAPE | 편향 (전체 / 하위) "
+      "| 0으로 자른 하위 예측 |\n|---|---|---|---|---|---|")
+    neg = M["neg_share"]["LGBM"]
+    for m in ["Base", "BU", "OLS", "WLS_struct", "WLS_var", "MinT_shrink"]:
+        t = mt[m]["by_level"]
+        mark = " **(채택)**" if m == FM["adopted"] else ""
+        w(f"| {METHOD_NAME[m]}{mark} | " + " | ".join(_p(t[x]["WAPE"]) for x in lv)
+          + f" | {_pp(t['total']['Bias'])} / {_pp(t['bottom']['Bias'])} | {_p(neg[m], 2) if m in neg else '-'} |")
+    x = b["MinT_vs_BU"]
+    w("\n- 테스트 P(MinT < BU): " + ", ".join(f"{LEVEL_KO[k]} {x[k]['p_better']:.3f}" for k in lv)
+      + f", 세 수준 모두 {x['p_better_all']:.3f}. 하위에서 MinT의 WAPE가 BU보다 상대적으로 "
+      f"{_p(-x['bottom']['rel_reduction'])} 높았다 (90% 구간 {_p(-x['bottom']['rel_reduction_q95'])} ~ "
+      f"{_p(-x['bottom']['rel_reduction_q05'])}). MinT 편향 {_pp(mt['MinT_shrink']['by_level']['bottom']['Bias'])}: "
+      "검증 구간(수출 감소기)의 과대 예측 오차로 만든 W가 테스트 구간 예측을 아래로 끌어내린 것으로 보인다.")
+    y = b["BU_vs_Base"]
+    better = [k for k in ("total", "product") if y[k]["p_better"] >= 0.9]
+    w("- P(BU < 조정 전): " + ", ".join(f"{LEVEL_KO[k]} {y[k]['p_better']:.3f}" for k in ("total", "product"))
+      + (f". {'·'.join(LEVEL_KO[k] for k in better)}에서는 합계를 직접 ETS로 예측하는 것보다 하위 LightGBM 예측을 "
+         "더하는 쪽이 나았다 (P >= 0.9)." if better else ". 차이가 기준(0.9)을 넘지 않았다."))
+    node = mt["Base"]["by_node"], mt["BU"]["by_node"]
+    w(f"- 노드별 (조정 전 -> BU): 전체 {_p(node[0]['TOTAL']['WAPE'])} -> {_p(node[1]['TOTAL']['WAPE'])}, "
+      f"ABS {_p(node[0]['ABS']['WAPE'])} -> {_p(node[1]['ABS']['WAPE'])}, "
+      f"PC {_p(node[0]['PC']['WAPE'])} -> {_p(node[1]['PC']['WAPE'])}")
+    me, be = M["metrics"]["ETS"], M["bootstrap"]["ETS"]["MinT_vs_BU"]
+    w(f"- 참고 (하위 기준 예측도 ETS인 고전적 설정): 하위 WAPE BU {_p(me['BU']['by_level']['bottom']['WAPE'])}, "
+      f"MinT {_p(me['MinT_shrink']['by_level']['bottom']['WAPE'])}, 제품 합계 BU "
+      f"{_p(me['BU']['by_level']['product']['WAPE'])}, MinT {_p(me['MinT_shrink']['by_level']['product']['WAPE'])}, "
+      f"P(MinT < BU, 세 수준 모두) = {be['p_better_all']:.3f}.")
+    w(f"- MinT 축소 강도 λ = {M['lambda']['LGBM']:.3f} (1이면 상관을 버리고 대각만 씀). 오차 72개가 기준 시점과 h로 "
+      "서로 겹쳐 실제 정보보다 많아 보였고, 그래서 노드 간 상관을 거의 그대로 믿은 것으로 본다.")
+    w("- P10~P90 구간은 하위 시리즈에만 있다 (분위수는 더해지지 않아서 합계 노드 구간은 만들지 않았다).")
+    return "\n".join(L) + "\n"
+
+
+def agent_md(A):
+    """11절: 질의응답 에이전트 평가 (python ask.py --eval이 쓴 outputs/agent_eval.json)."""
+    n = A["n_questions"]
+    L = ["\n## 11. 질의응답 에이전트 (7번)\n",
+         f"- 모델 `{A['model']}` (OpenAI 호환 API, {A['endpoint_host']}), 실행 {A['created']}, "
+         f"미리 정한 질문 {n}개 (`tests/agent_questions.json`)",
+         f"- 숫자 검사 통과: 첫 답변 {A['first_try_ok']}/{n}, 근거 없는 숫자를 알려 주고 한 번 다시 쓰게 한 뒤 "
+         f"{A['final_ok']}/{n}",
+         f"- 기대한 도구를 부른 질문: {A['tool_choice_ok']}/{n}",
+         f"- 답변 속 숫자 중 근거 없는 숫자: 첫 답변 {A['unsupported_first_try']}개 / {A['numbers_first_try']}개, "
+         f"최종 {A['unsupported_final']}개 / {A['numbers_final']}개\n",
+         "| 질문 | 부른 도구 | 첫 답변 | 최종 | 근거 없던 숫자 (첫 답변) |", "|---|---|---|---|---|"]
+    for q in A["questions"]:
+        tools = ", ".join(q["called_tools"]) or "-"
+        L.append(f"| {q['question']} | {tools} | {'통과' if q['first_try_ok'] else '실패'} | "
+                 f"{'통과' if q['final_ok'] else '실패'} | {', '.join(q['unsupported_first']) or '-'} |")
+    L.append("\n숫자 검사는 '답변의 숫자가 도구 결과 어딘가에 있는가'만 본다. 맞는 항목과 짝지었는지까지는 확인하지 않는다.")
+    return "\n".join(L) + "\n"
+
+
 def summary_table(R):
     """README·SUMMARY에 넣는 표 1개: 모델별 테스트 WAPE·편향·MASE + 부트스트랩 + 구간 적중률."""
     m, bl, iv = R["metrics"], R["bootstrap"]["LGBM"], R["intervals"]
@@ -402,7 +479,13 @@ def build():
     R, V, F = _load("results.json"), _load("val_summary.json"), json.loads(config.FROZEN_PATH.read_text(encoding="utf-8"))
     fc_path = OUT / "test_forecasts.csv.gz"
     wins = origin_wins(pd.read_csv(fc_path)) if fc_path.exists() else None
-    (config.ROOT / "RESULTS.md").write_text(results_md(R, V, F, wins), encoding="utf-8")
+    text = results_md(R, V, F, wins)
+    if (OUT / "mint_results.json").exists() and config.FROZEN_MINT_PATH.exists():
+        FM = json.loads(config.FROZEN_MINT_PATH.read_text(encoding="utf-8"))
+        text += mint_md(_load("mint_results.json"), _load("mint_val.json"), FM)
+    if (OUT / "agent_eval.json").exists():
+        text += agent_md(_load("agent_eval.json"))
+    (config.ROOT / "RESULTS.md").write_text(text, encoding="utf-8")
     for doc in ("README.md", "SUMMARY.md"):
         inject(config.ROOT / doc, "summary_table", summary_table(R))
     print("RESULTS.md를 만들었습니다.")
