@@ -34,7 +34,9 @@ def calibrate(cal):
 
 
 def apply(lo, hi, scale, q_lo, q_hi):
-    return np.clip(lo - q_lo * scale, 0.0, None), hi + q_hi * scale
+    L = np.clip(lo - q_lo * scale, 0.0, None)
+    U = np.maximum(hi + q_hi * scale, L)    # 구간을 좁히는 보정에서 위·아래가 뒤집히지 않게
+    return L, U
 
 
 def online_thresholds(cal_all, T):

@@ -20,7 +20,8 @@ OUT = config.OUT_DIR
 MODELS = ["SNaive", "ETS", "LGBM"]                       # 앙상블에 섞는 모델
 GRID = [(a / 10, b / 10, round((10 - a - b) / 10, 1))    # 가중치 0.1 단위, 합 1 -> 66개
         for a in range(11) for b in range(11 - a)]
-IV_COLS = ["series", "product", "s", "T", "origin", "h", "target", "y", "scale", "lo", "mid", "hi"]
+IV_COLS = ["series", "product", "s", "T", "origin", "h", "target", "y", "scale", "point", "lo", "mid", "hi",
+           "reordered"]
 
 
 # ---------------------------------------------------------------- 공통
@@ -73,24 +74,27 @@ def score(fc):
 
 
 def intervals(point, lo_fc, hi_fc):
-    """점예측(P50)과 q10, q90을 한 표로. 분위수가 엇갈리면 세 값을 정렬해 lo <= mid <= hi로 맞춘다."""
+    """점예측(P50)과 q10, q90을 한 표로. 따로 학습한 세 값이 엇갈리면 크기순으로 다시 놓아
+    lo <= mid <= hi로 맞춘다. 채점한 점예측은 'point'에 그대로 남긴다."""
     key = ["series", "T", "h"]
     idx = point.set_index(key).index
     lo = lo_fc.set_index(key)["yhat"].reindex(idx).to_numpy()
     hi = hi_fc.set_index(key)["yhat"].reindex(idx).to_numpy()
     trio = np.sort(np.stack([lo, point["yhat"].to_numpy(), hi], axis=1), axis=1)
     out = point[["series", "product", "s", "T", "origin", "h", "target", "y", "scale"]].copy()
+    out["point"] = point["yhat"].to_numpy()
     out["lo"], out["mid"], out["hi"] = trio[:, 0], trio[:, 1], trio[:, 2]
+    out["reordered"] = (trio[:, 0] != lo) | (trio[:, 2] != hi)   # 정렬로 바뀐 행
     return out
 
 
 def interval_stats(y, L, U):
     """구간 평가: 적중률, 아래·위로 벗어난 비율, 상대 폭, 상대 구간 점수(Winkler, 낮을수록 좋음)."""
     y, L, U = (np.asarray(a, float) for a in (y, L, U))
-    below, above = y < L, y > U
+    below, above = y < L, (y > U) & ~(y < L)
     a = config.ALPHA_LO * 2                                 # 80% 구간 -> alpha = 0.2
     iscore = (U - L) + (2 / a) * (L - y) * below + (2 / a) * (y - U) * above
-    return {"coverage": float(1 - below.mean() - above.mean()), "below": float(below.mean()),
+    return {"coverage": float(((y >= L) & (y <= U)).mean()), "below": float(below.mean()),
             "above": float(above.mean()), "width_rel": float((U - L).sum() / y.sum()),
             "interval_score_rel": float(iscore.sum() / y.sum()), "n": int(len(y))}
 
@@ -174,7 +178,8 @@ def stage_val(D):
     }
     summary = {"ets_fallbacks": ets_fails, "metrics": model_tables(fcs), "ext_compare": ext_cmp,
                "ensemble_grid_best": ens[w_best], "bootstrap_val": val_boot,
-               "intervals_raw": interval_stats(iv["y"], iv["lo"], iv["hi"])}
+               "intervals_raw": interval_stats(iv["y"], iv["lo"], iv["hi"]),
+               "intervals_reordered_share": float(iv["reordered"].mean())}
     pd.concat(fcs.values(), ignore_index=True).to_csv(OUT / "val_forecasts.csv.gz", index=False)
     iv[IV_COLS].to_csv(OUT / "val_intervals.csv.gz", index=False)
     _json(manifest, config.ROOT / "data" / "manifest.json")
@@ -188,6 +193,10 @@ def stage_final(D):
         raise SystemExit("frozen.json이 없습니다. 먼저 `python run_all.py --stage val`로 만들고 커밋하세요.")
     F = json.loads(config.FROZEN_PATH.read_text(encoding="utf-8"))
     assert F["series"] == list(D.series), "시리즈 구성이 동결 때와 다릅니다"
+    manifest = {"comtrade": data_comtrade.manifest(), "fred": data_fred.manifest()}
+    same_data = hashlib.sha256(json.dumps(manifest, sort_keys=True).encode()).hexdigest() == F["data"]["manifest_sha256"]
+    if not same_data:
+        print("[final] 경고: 원자료가 동결 때와 다릅니다 (다시 받았거나 Comtrade가 수정함). 숫자가 RESULTS.md와 다를 수 있습니다.")
     test = D.test_idx
     print(f"[final] 기준 시점 {D.months[test[0]]} ~ {D.months[test[-1]]} ({len(test)}개)")
     params, features = F["lgbm"]["params"], F["lgbm"]["features"]
@@ -221,8 +230,8 @@ def stage_final(D):
     alt = run_lgbm(D, test, params, alt_features, "LGBM_alt")
 
     # ---- 결과 묶기
-    R = {"frozen_created": F["created"], "ets_fallbacks_test": ets_fails,
-         "metrics": model_tables(fcs)}
+    R = {"frozen_created": F["created"], "same_data_as_freeze": same_data, "ets_fallbacks_test": ets_fails,
+         "intervals_reordered_share_test": float(iv["reordered"].mean()), "metrics": model_tables(fcs)}
     # 예측 대상 월이 모든 h에서 겹치는 구간만으로 본 시점별 WAPE (시점 효과와 기간 효과 분리)
     c0, c1 = config.CUTOFF + config.H, config.TEST_ORIGINS[-1] + 1
     R["common_targets"] = [str(c0), str(c1)]

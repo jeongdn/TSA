@@ -1,0 +1,463 @@
+{
+  "created": "2026-11-01T21:51:10",
+  "data": {
+    "start": "2015-01",
+    "end": "2025-12",
+    "check": {
+      "rows": 15529,
+      "months": 132,
+      "max_rel_diff_world_vs_partners": 0.0,
+      "estimated_rows": 0,
+      "kg_from_qty_or_altqty": [
+        [
+          "2017-09",
+          "390740",
+          "W00",
+          "altQty"
+        ],
+        [
+          "2017-09",
+          "390740",
+          "CHE",
+          "altQty"
+        ],
+        [
+          "2025-08",
+          "390740",
+          "W00",
+          "altQty"
+        ],
+        [
+          "2025-08",
+          "390740",
+          "FIN",
+          "altQty"
+        ]
+      ],
+      "partners_per_month_min": 45
+    },
+    "manifest_sha256": "3ae6a3d7efb4995cb8e5ccc30eab8191ee1d4b79011ad919c67764aa16c44721"
+  },
+  "windows": {
+    "select": [
+      "2020-03",
+      "2022-02"
+    ],
+    "val_origins": [
+      "2022-02",
+      "2023-01"
+    ],
+    "test_origins": [
+      "2023-07",
+      "2025-06"
+    ],
+    "cutoff": "2023-07",
+    "horizon": 6
+  },
+  "series": [
+    "ABS-CHN",
+    "ABS-HKG",
+    "ABS-TUR",
+    "ABS-VNM",
+    "ABS-USA",
+    "ABS-MEX",
+    "ABS-THA",
+    "ABS-IND",
+    "ABS-OTH",
+    "PC-CHN",
+    "PC-MEX",
+    "PC-VNM",
+    "PC-IND",
+    "PC-HUN",
+    "PC-USA",
+    "PC-HKG",
+    "PC-JPN",
+    "PC-OTH"
+  ],
+  "lgbm": {
+    "config_index": 18,
+    "params": {
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "learning_rate": 0.02,
+      "n_estimators": 1000,
+      "colsample_bytree": 1.0,
+      "reg_lambda": 1.0
+    },
+    "features": [
+      "lag0",
+      "lag1",
+      "lag2",
+      "lag3",
+      "lag4",
+      "lag5",
+      "lag6",
+      "lag7",
+      "lag8",
+      "lag9",
+      "lag10",
+      "lag11",
+      "mean3",
+      "mean6",
+      "prev_year",
+      "same_month_1y",
+      "same_month_2y",
+      "month",
+      "h",
+      "product",
+      "country",
+      "log_scale"
+    ],
+    "use_ext": false,
+    "ext_p_better_val": 0.7256
+  },
+  "ensemble_weights": {
+    "SNaive": 0.1,
+    "ETS": 0.1,
+    "LGBM": 0.8
+  },
+  "conformal": {
+    "level_each_side": 0.9,
+    "Q": {
+      "1": [
+        0.1394658012597642,
+        0.027870862420401765
+      ],
+      "2": [
+        0.1926470590705214,
+        0.000508273034966511
+      ],
+      "3": [
+        0.2258976252025811,
+        -0.0060283952212671285
+      ],
+      "4": [
+        0.21444675531710763,
+        0.04811252175560708
+      ],
+      "5": [
+        0.24309458172160675,
+        0.11657096384480709
+      ],
+      "6": [
+        0.22852958092582892,
+        0.13780491770219763
+      ]
+    }
+  },
+  "bootstrap": {
+    "block": 6,
+    "block_h1": 3,
+    "B": 10000,
+    "seed": 2026,
+    "widen": "sqrt(n/(n-b))"
+  },
+  "primary": [
+    "테스트 WAPE: LGBM vs SNaive, ETS (18개 시리즈 x 24개 기준 시점 x 6개 시점 전체)",
+    "P_all: 재표집 중 LGBM의 WAPE가 SNaive와 ETS 둘 다보다 낮은 비율 (블록 6, 보정)",
+    "P10~P90 적중률: 검증 구간 보정(CQR static)"
+  ],
+  "decision_rule": "P >= 0.9이면 채택. 판단은 검증 구간에서 하고, 테스트 확률은 결과와 관계없이 그대로 보고한다.",
+  "configs": [
+    {
+      "index": 0,
+      "num_leaves": 31,
+      "min_child_samples": 10,
+      "learning_rate": 0.02,
+      "n_estimators": 500,
+      "colsample_bytree": 0.8,
+      "reg_lambda": 1.0,
+      "val_wape": 0.2397909517697691
+    },
+    {
+      "index": 1,
+      "num_leaves": 7,
+      "min_child_samples": 20,
+      "learning_rate": 0.05,
+      "n_estimators": 500,
+      "colsample_bytree": 1.0,
+      "reg_lambda": 10.0,
+      "val_wape": 0.2434626282163111
+    },
+    {
+      "index": 2,
+      "num_leaves": 31,
+      "min_child_samples": 100,
+      "learning_rate": 0.1,
+      "n_estimators": 200,
+      "colsample_bytree": 1.0,
+      "reg_lambda": 1.0,
+      "val_wape": 0.2375424667711864
+    },
+    {
+      "index": 3,
+      "num_leaves": 7,
+      "min_child_samples": 20,
+      "learning_rate": 0.02,
+      "n_estimators": 1000,
+      "colsample_bytree": 1.0,
+      "reg_lambda": 10.0,
+      "val_wape": 0.2423042346189913
+    },
+    {
+      "index": 4,
+      "num_leaves": 7,
+      "min_child_samples": 50,
+      "learning_rate": 0.05,
+      "n_estimators": 1000,
+      "colsample_bytree": 0.6,
+      "reg_lambda": 1.0,
+      "val_wape": 0.24450247317042598
+    },
+    {
+      "index": 5,
+      "num_leaves": 15,
+      "min_child_samples": 100,
+      "learning_rate": 0.05,
+      "n_estimators": 500,
+      "colsample_bytree": 0.8,
+      "reg_lambda": 1.0,
+      "val_wape": 0.23769191753775243
+    },
+    {
+      "index": 6,
+      "num_leaves": 7,
+      "min_child_samples": 20,
+      "learning_rate": 0.02,
+      "n_estimators": 200,
+      "colsample_bytree": 1.0,
+      "reg_lambda": 1.0,
+      "val_wape": 0.24123095768021097
+    },
+    {
+      "index": 7,
+      "num_leaves": 7,
+      "min_child_samples": 20,
+      "learning_rate": 0.02,
+      "n_estimators": 500,
+      "colsample_bytree": 1.0,
+      "reg_lambda": 0.0,
+      "val_wape": 0.24324023546348764
+    },
+    {
+      "index": 8,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "learning_rate": 0.1,
+      "n_estimators": 500,
+      "colsample_bytree": 0.6,
+      "reg_lambda": 0.0,
+      "val_wape": 0.2454589596049292
+    },
+    {
+      "index": 9,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "learning_rate": 0.02,
+      "n_estimators": 500,
+      "colsample_bytree": 0.8,
+      "reg_lambda": 0.0,
+      "val_wape": 0.2409754813458996
+    },
+    {
+      "index": 10,
+      "num_leaves": 31,
+      "min_child_samples": 10,
+      "learning_rate": 0.1,
+      "n_estimators": 1000,
+      "colsample_bytree": 1.0,
+      "reg_lambda": 10.0,
+      "val_wape": 0.23920733739106573
+    },
+    {
+      "index": 11,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "learning_rate": 0.02,
+      "n_estimators": 500,
+      "colsample_bytree": 0.8,
+      "reg_lambda": 10.0,
+      "val_wape": 0.2414467334806562
+    },
+    {
+      "index": 12,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "learning_rate": 0.05,
+      "n_estimators": 500,
+      "colsample_bytree": 0.8,
+      "reg_lambda": 10.0,
+      "val_wape": 0.24155198288559612
+    },
+    {
+      "index": 13,
+      "num_leaves": 7,
+      "min_child_samples": 20,
+      "learning_rate": 0.05,
+      "n_estimators": 1000,
+      "colsample_bytree": 0.8,
+      "reg_lambda": 0.0,
+      "val_wape": 0.24462052036546222
+    },
+    {
+      "index": 14,
+      "num_leaves": 7,
+      "min_child_samples": 20,
+      "learning_rate": 0.02,
+      "n_estimators": 1000,
+      "colsample_bytree": 0.8,
+      "reg_lambda": 0.0,
+      "val_wape": 0.2425271472771423
+    },
+    {
+      "index": 15,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "learning_rate": 0.05,
+      "n_estimators": 500,
+      "colsample_bytree": 0.8,
+      "reg_lambda": 0.0,
+      "val_wape": 0.24203648106234157
+    },
+    {
+      "index": 16,
+      "num_leaves": 7,
+      "min_child_samples": 50,
+      "learning_rate": 0.1,
+      "n_estimators": 500,
+      "colsample_bytree": 0.8,
+      "reg_lambda": 1.0,
+      "val_wape": 0.24385915342591596
+    },
+    {
+      "index": 17,
+      "num_leaves": 7,
+      "min_child_samples": 20,
+      "learning_rate": 0.05,
+      "n_estimators": 500,
+      "colsample_bytree": 1.0,
+      "reg_lambda": 1.0,
+      "val_wape": 0.24229894253372614
+    },
+    {
+      "index": 18,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "learning_rate": 0.02,
+      "n_estimators": 1000,
+      "colsample_bytree": 1.0,
+      "reg_lambda": 1.0,
+      "val_wape": 0.2371771337430676
+    },
+    {
+      "index": 19,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "learning_rate": 0.1,
+      "n_estimators": 200,
+      "colsample_bytree": 0.6,
+      "reg_lambda": 10.0,
+      "val_wape": 0.23889910780540552
+    },
+    {
+      "index": 20,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "learning_rate": 0.1,
+      "n_estimators": 200,
+      "colsample_bytree": 1.0,
+      "reg_lambda": 1.0,
+      "val_wape": 0.24393466917802814
+    },
+    {
+      "index": 21,
+      "num_leaves": 7,
+      "min_child_samples": 10,
+      "learning_rate": 0.02,
+      "n_estimators": 1000,
+      "colsample_bytree": 0.8,
+      "reg_lambda": 10.0,
+      "val_wape": 0.24347891789657095
+    },
+    {
+      "index": 22,
+      "num_leaves": 15,
+      "min_child_samples": 10,
+      "learning_rate": 0.02,
+      "n_estimators": 500,
+      "colsample_bytree": 1.0,
+      "reg_lambda": 10.0,
+      "val_wape": 0.2410797336978002
+    },
+    {
+      "index": 23,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "learning_rate": 0.05,
+      "n_estimators": 500,
+      "colsample_bytree": 0.8,
+      "reg_lambda": 1.0,
+      "val_wape": 0.2399688193807469
+    },
+    {
+      "index": 24,
+      "num_leaves": 7,
+      "min_child_samples": 100,
+      "learning_rate": 0.05,
+      "n_estimators": 1000,
+      "colsample_bytree": 1.0,
+      "reg_lambda": 10.0,
+      "val_wape": 0.242199406431285
+    },
+    {
+      "index": 25,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "learning_rate": 0.02,
+      "n_estimators": 200,
+      "colsample_bytree": 0.6,
+      "reg_lambda": 10.0,
+      "val_wape": 0.2379004807281607
+    },
+    {
+      "index": 26,
+      "num_leaves": 7,
+      "min_child_samples": 10,
+      "learning_rate": 0.02,
+      "n_estimators": 200,
+      "colsample_bytree": 1.0,
+      "reg_lambda": 0.0,
+      "val_wape": 0.24059873363480833
+    },
+    {
+      "index": 27,
+      "num_leaves": 7,
+      "min_child_samples": 50,
+      "learning_rate": 0.02,
+      "n_estimators": 500,
+      "colsample_bytree": 0.6,
+      "reg_lambda": 0.0,
+      "val_wape": 0.24350960472632402
+    },
+    {
+      "index": 28,
+      "num_leaves": 15,
+      "min_child_samples": 10,
+      "learning_rate": 0.1,
+      "n_estimators": 500,
+      "colsample_bytree": 1.0,
+      "reg_lambda": 1.0,
+      "val_wape": 0.2387321239431629
+    },
+    {
+      "index": 29,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "learning_rate": 0.05,
+      "n_estimators": 500,
+      "colsample_bytree": 0.8,
+      "reg_lambda": 10.0,
+      "val_wape": 0.24069676094149756
+    }
+  ]
+}

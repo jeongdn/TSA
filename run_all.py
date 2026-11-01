@@ -1,7 +1,8 @@
 """한 줄 재현: python run_all.py
 
-  --stage val    검증 단계만 (frozen.json이 없으면 만들고, 있으면 다시 고른 결과가 같은지만 확인)
-  --stage final  테스트 단계만 (frozen.json 필요)
+  --stage val    검증 단계만 (frozen.json이 없으면 만들고, 있으면 다시 고른 결과가 같은지 확인.
+                 frozen.json은 덮어쓰지 않지만 outputs/val_* 파일은 다시 쓴다)
+  --stage final  테스트 단계만 (frozen.json과, 같은 PC에서 먼저 돌린 val 단계의 outputs/val_* 파일 필요)
   --stage report 그림과 RESULTS.md만 다시 만든다
   --stage all    (기본) val -> final -> report
   --refresh      원자료를 다시 받는다 (기본은 data/raw 캐시 사용, 캐시가 없으면 자동으로 받음)

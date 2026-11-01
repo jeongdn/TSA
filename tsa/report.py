@@ -19,7 +19,7 @@ IV_COLORS = {"raw": "#2a78d6", "static": "#eb6834", "online": "#1baf7a"}
 INK, INK2, GRID, SURFACE = "#0b0b0b", "#52514e", "#e4e3df", "#fcfcfb"
 NAME = {"SNaive": "계절 나이브", "Mean12": "12개월 평균", "ETS": "ETS", "LGBM": "LightGBM",
         "Ensemble": "앙상블(검증 가중치)", "Ensemble_eq": "앙상블(1/3씩)"}
-IV_NAME = {"raw": "분위수 그대로", "static": "CQR (검증 구간 보정)", "online": "CQR (온라인 보정)"}
+IV_NAME = {"raw": "분위수 (보정 전)", "static": "CQR (검증 구간 보정)", "online": "CQR (온라인 보정)"}
 
 
 def _load(name):
@@ -70,11 +70,9 @@ def fig_coverage_by_h(R, ax):
     hs = range(1, config.H + 1)
     ax.axhline(80, color=INK2, lw=1, ls="--")
     ax.text(0.75, 80.6, "목표 80%", fontsize=8.5, color=INK2)
-    ends = []
     for kind in ["raw", "static", "online"]:
         v = [100 * R["intervals"][kind]["by_h"][str(h)]["coverage"] for h in hs]
         ax.plot(hs, v, color=IV_COLORS[kind], lw=2, marker="o", ms=5, label=IV_NAME[kind])
-        ends.append((IV_NAME[kind].split(" (")[0] if kind == "raw" else kind, v[-1]))
     ax.set_xlim(0.7, config.H + 0.3)
     ax.set_xticks(list(hs))
     ax.set_xlabel("몇 개월 앞 (h)")
@@ -135,7 +133,7 @@ def fig_fan(iv, wide, series=("ABS-CHN", "PC-CHN")):
         tx = pd.PeriodIndex(d["target"], freq="M").to_timestamp()
         ax.fill_between(tx, d["L_static"], d["U_static"], color=COLORS["LGBM"], alpha=0.18, lw=0,
                         label="P10~P90 (CQR)")
-        ax.plot(tx, d["mid"], color=COLORS["LGBM"], lw=2, label="LightGBM 1개월 앞")
+        ax.plot(tx, d["point"], color=COLORS["LGBM"], lw=2, label="LightGBM 1개월 앞")
         ax.set_title(f"{s} (톤/월)", loc="left", fontsize=10.5)
         ax.tick_params(axis="x", labelsize=8)
     axes[0].legend(loc="upper left", fontsize=8.5)
@@ -168,7 +166,7 @@ def _p(x, d=1):
 
 
 def _pp(x, d=1):
-    return f"{100 * x:+.{d}f}%p"
+    return f"{100 * x:+.{d}f}%"          # 편향처럼 부호가 있는 비율
 
 
 def _git(ref):
@@ -190,7 +188,11 @@ def results_md(R, V, F):
       f"시리즈 {len(F['series'])}개 (제품별 상위 8개국 + 기타)")
     w(f"- 검증 기준 시점 {F['windows']['val_origins'][0]} ~ {F['windows']['val_origins'][1]} (12개), "
       f"테스트 기준 시점 {F['windows']['test_origins'][0]} ~ {F['windows']['test_origins'][1]} (24개), 1~6개월 앞")
-    w(f"- 동결: frozen.json 작성 {F['created']}, 태그 `freeze` = `{_git('freeze')}`. 테스트 채점은 그 뒤 한 번.\n")
+    w(f"- 동결: frozen.json 작성 {F['created']}, 태그 `freeze` = 커밋 `{_git('freeze^{commit}')}`. "
+      "테스트 채점은 그 뒤 한 번.")
+    if not R.get("same_data_as_freeze", True):
+        w("- **경고: 이 결과는 동결 때와 다른 원자료로 계산됐다.**")
+    w("")
 
     # 1. 핵심
     lg, et, sn = m["LGBM"]["all"], m["ETS"]["all"], m["SNaive"]["all"]
@@ -214,8 +216,9 @@ def results_md(R, V, F):
     verdict = "넘었다" if bl["p_better_all"] >= 0.9 else "넘지 못했다"
     w(f"판정: 미리 정한 기준 P >= 0.9를 테스트에서 **{verdict}** (P = {bl['p_better_all']:.3f}). "
       f"검증 구간 값은 {V['bootstrap_val']['p_better_all']:.3f}였다 (같은 구간에서 고른 모델이라 낙관적인 값).\n")
-    w("P는 '블록으로 다시 뽑은 테스트 기간 가운데 LightGBM의 WAPE가 더 낮았던 비율'이다. "
-      "미래에 더 나을 확률이 아니다.\n")
+    w("P는 기준 시점을 길이 6 블록으로 다시 뽑아 얻은 '오차 합 차이'의 분포를 작은 표본 보정으로 "
+      "sqrt(24/18)배 넓힌 뒤, LightGBM의 WAPE가 더 낮게 나온 비율이다. 보정하지 않은 비율은 4절의 "
+      "'보정 없음' 행에 있다. 미래에 더 나을 확률이 아니다.\n")
 
     # 2. 모델별
     w("## 2. 모델별 테스트 지표\n")
@@ -310,6 +313,8 @@ def results_md(R, V, F):
     w("- 고른 LightGBM 설정: " + ", ".join(f"{k}={v}" for k, v in F["lgbm"]["params"].items()))
     w("- 피처 중요도(gain 비중, 마지막 테스트 기준 시점 모델): " + ", ".join(f"{k} {_p(fg[k])}" for k in top))
     w(f"- ETS 적합 실패로 계절 나이브를 대신 쓴 횟수: 검증 {V['ets_fallbacks']}, 테스트 {R['ets_fallbacks_test']}")
+    w(f"- q10·P50·q90을 크기순으로 다시 놓은 행의 비율: 검증 {_p(V['intervals_reordered_share'])}, "
+      f"테스트 {_p(R['intervals_reordered_share_test'])} ('보정 전' 구간은 이 정렬 뒤의 q10~q90)")
     qtxt = ", ".join(f"h{h}: ({v[0]:+.3f}, {v[1]:+.3f})" for h, v in F["conformal"]["Q"].items())
     w(f"- CQR 보정폭 (Q_lo, Q_hi), 규모 대비: {qtxt}. 양수면 구간을 넓히고 음수면 좁힌다.")
     w("\n그림: `outputs/figures/` (fig_portfolio, fig_origin_diff, fig_selection_bias, fig_fan)")
@@ -326,7 +331,7 @@ def summary_table(R):
     L.append("")
     L.append(f"- P(LightGBM의 WAPE < ETS) = {bl['ETS']['p_better']:.3f}, "
              f"P(< 계절 나이브) = {bl['SNaive']['p_better']:.3f}, P(둘 다) = {bl['p_better_all']:.3f} "
-             "(블록 부트스트랩, 블록 6, 10,000회)")
+             "(블록 부트스트랩, 블록 6, 10,000회, 작은 표본 보정)")
     L.append(f"- P10~P90 적중률(목표 80%): 보정 전 {_p(iv['raw']['all']['coverage'])} -> "
              f"CQR 보정 후 {_p(iv['static']['all']['coverage'])}")
     return "\n".join(L)
@@ -346,8 +351,14 @@ def inject(path, name, text):
 
 def build():
     R, V, F = _load("results.json"), _load("val_summary.json"), json.loads(config.FROZEN_PATH.read_text(encoding="utf-8"))
-    figures(R)
     (config.ROOT / "RESULTS.md").write_text(results_md(R, V, F), encoding="utf-8")
     for doc in ("README.md", "SUMMARY.md"):
         inject(config.ROOT / doc, "summary_table", summary_table(R))
-    print("RESULTS.md와 그림을 만들었습니다.")
+    print("RESULTS.md를 만들었습니다.")
+    needed = [OUT / "test_forecasts.csv.gz", OUT / "test_intervals.csv.gz", config.PROCESSED_DIR / "panel_tonnes.csv"]
+    missing = [p.name for p in needed if not p.exists()]
+    if missing:   # 예측 파일은 커밋하지 않으므로 새로 받은 저장소에서는 --stage final을 먼저 돌려야 한다
+        print(f"그림은 건너뜁니다: {missing} 없음. `python run_all.py`로 전체를 먼저 실행하세요.")
+        return
+    figures(R)
+    print("그림을 만들었습니다.")
