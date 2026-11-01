@@ -1,0 +1,368 @@
+{
+  "created": "2026-11-02T02:32:19",
+  "model": "qwen2.5:7b",
+  "endpoint_host": "localhost:11434",
+  "questions_file": "tests/agent_questions_test2.json",
+  "agent_commit": "ba394fc",
+  "agent_version": "v3",
+  "n_questions": 10,
+  "first_try_ok": 10,
+  "final_ok": 10,
+  "tool_choice_ok": 10,
+  "numbers_first_try": 86,
+  "numbers_final": 86,
+  "unsupported_first_try": 0,
+  "unsupported_final": 0,
+  "issues_first_try": 0,
+  "issues_final": 0,
+  "redacted_answers": 0,
+  "delivered_ok": 10,
+  "answer_kinds": {
+    "final": 4,
+    "text_ids": 5,
+    "guard": 1
+  },
+  "max_prompt_tokens": 4870,
+  "questions": [
+    {
+      "id": "u01",
+      "question": "LightGBM이 ETS보다 정확했다고 들었는데, 테스트 기간 내내 꾸준히 그랬나요? 예측을 낸 시점별로 따져 보면 몇 번 중 몇 번이나 ETS보다 나았나요?",
+      "expect_tools": [
+        "get_backtest"
+      ],
+      "called_tools": [
+        "get_backtest"
+      ],
+      "tool_choice_ok": true,
+      "first_try_ok": true,
+      "final_ok": true,
+      "attempts": 1,
+      "n_numbers_first": 8,
+      "n_numbers_final": 8,
+      "unsupported_first": [],
+      "unsupported_final": [],
+      "issues_first": [],
+      "issues_final": [],
+      "redacted": 0,
+      "answer_kind": "final",
+      "delivered_ok": true,
+      "max_prompt_tokens": 3155
+    },
+    {
+      "id": "u02",
+      "question": "반년 뒤 물량, 즉 6개월 앞 예측만 따로 보면 어느 모델이 가장 정확했나요? 그 모델의 오차율도 알려 주세요.",
+      "expect_tools": [
+        "get_backtest"
+      ],
+      "called_tools": [
+        "get_backtest"
+      ],
+      "tool_choice_ok": true,
+      "first_try_ok": true,
+      "final_ok": true,
+      "attempts": 1,
+      "n_numbers_first": 6,
+      "n_numbers_final": 6,
+      "unsupported_first": [],
+      "unsupported_final": [],
+      "issues_first": [],
+      "issues_final": [],
+      "redacted": 0,
+      "answer_kind": "text_ids",
+      "delivered_ok": true,
+      "max_prompt_tokens": 1941
+    },
+    {
+      "id": "u03",
+      "question": "테스트 기간에 실제 수출 물량보다 많게 예측하는 경향이 가장 컸던 모델은 무엇이고, 몇 % 정도 많게 잡았나요?",
+      "expect_tools": [
+        "get_backtest"
+      ],
+      "called_tools": [
+        "get_backtest"
+      ],
+      "tool_choice_ok": true,
+      "first_try_ok": true,
+      "final_ok": true,
+      "attempts": 1,
+      "n_numbers_first": 10,
+      "n_numbers_final": 10,
+      "unsupported_first": [],
+      "unsupported_final": [],
+      "issues_first": [],
+      "issues_final": [],
+      "redacted": 0,
+      "answer_kind": "text_ids",
+      "delivered_ok": true,
+      "max_prompt_tokens": 4870
+    },
+    {
+      "id": "u04",
+      "question": "PC 수출 합계 예측만 놓고 보면, 국가별 예측을 더하는 BU 방식과 MinT 조정 중 테스트 기간에 어느 쪽이 더 정확했나요?",
+      "expect_tools": [
+        "get_backtest"
+      ],
+      "called_tools": [
+        "get_backtest"
+      ],
+      "tool_choice_ok": true,
+      "first_try_ok": true,
+      "final_ok": true,
+      "attempts": 1,
+      "n_numbers_first": 3,
+      "n_numbers_final": 3,
+      "unsupported_first": [],
+      "unsupported_final": [],
+      "issues_first": [],
+      "issues_final": [],
+      "redacted": 0,
+      "answer_kind": "final",
+      "delivered_ok": true,
+      "max_prompt_tokens": 3144
+    },
+    {
+      "id": "u05",
+      "question": "중국향 PC 수출은 2026년 1월부터 6월까지 모두 합쳐 몇 톤이 나갈 것으로 예측되나요? 월별 예측도 함께 알려 주세요.",
+      "expect_tools": [
+        "get_forecast"
+      ],
+      "called_tools": [
+        "get_forecast"
+      ],
+      "tool_choice_ok": true,
+      "first_try_ok": true,
+      "final_ok": true,
+      "attempts": 1,
+      "n_numbers_first": 22,
+      "n_numbers_final": 22,
+      "unsupported_first": [],
+      "unsupported_final": [],
+      "issues_first": [],
+      "issues_final": [],
+      "redacted": 0,
+      "answer_kind": "final",
+      "delivered_ok": true,
+      "max_prompt_tokens": 3386
+    },
+    {
+      "id": "u06",
+      "question": "ABS 수출 합계는 2026년 2분기(4~6월) 석 달 동안 모두 몇 톤으로 예측되나요?",
+      "expect_tools": [
+        "get_forecast"
+      ],
+      "called_tools": [
+        "get_forecast"
+      ],
+      "tool_choice_ok": true,
+      "first_try_ok": true,
+      "final_ok": true,
+      "attempts": 1,
+      "n_numbers_first": 13,
+      "n_numbers_final": 13,
+      "unsupported_first": [],
+      "unsupported_final": [],
+      "issues_first": [],
+      "issues_final": [],
+      "redacted": 0,
+      "answer_kind": "text_ids",
+      "delivered_ok": true,
+      "max_prompt_tokens": 2476
+    },
+    {
+      "id": "u07",
+      "question": "2026년 2월에 ABS와 PC를 합친 전체 수출 물량은 작년 2월과 비교해 얼마나 달라질 것으로 예측되나요?",
+      "expect_tools": [
+        "get_forecast"
+      ],
+      "called_tools": [
+        "get_forecast"
+      ],
+      "tool_choice_ok": true,
+      "first_try_ok": true,
+      "final_ok": true,
+      "attempts": 1,
+      "n_numbers_first": 0,
+      "n_numbers_final": 0,
+      "unsupported_first": [],
+      "unsupported_final": [],
+      "issues_first": [],
+      "issues_final": [],
+      "redacted": 0,
+      "answer_kind": "guard",
+      "delivered_ok": true,
+      "max_prompt_tokens": 2423
+    },
+    {
+      "id": "u08",
+      "question": "헝가리로 가는 PC 수출은 2026년 5월에 몇 톤 정도 나갈 것으로 예측되나요?",
+      "expect_tools": [
+        "get_forecast"
+      ],
+      "called_tools": [
+        "get_forecast"
+      ],
+      "tool_choice_ok": true,
+      "first_try_ok": true,
+      "final_ok": true,
+      "attempts": 1,
+      "n_numbers_first": 3,
+      "n_numbers_final": 3,
+      "unsupported_first": [],
+      "unsupported_final": [],
+      "issues_first": [],
+      "issues_final": [],
+      "redacted": 0,
+      "answer_kind": "text_ids",
+      "delivered_ok": true,
+      "max_prompt_tokens": 2049
+    },
+    {
+      "id": "u09",
+      "question": "2023년 12월 실적까지 보고 냈던 인도향 ABS 수출 예측은 2024년 1~3월에 각각 얼마였고, 실제로는 얼마씩 나갔나요?",
+      "expect_tools": [
+        "get_forecast"
+      ],
+      "called_tools": [
+        "get_forecast"
+      ],
+      "tool_choice_ok": true,
+      "first_try_ok": true,
+      "final_ok": true,
+      "attempts": 1,
+      "n_numbers_first": 18,
+      "n_numbers_final": 18,
+      "unsupported_first": [],
+      "unsupported_final": [],
+      "issues_first": [],
+      "issues_final": [],
+      "redacted": 0,
+      "answer_kind": "final",
+      "delivered_ok": true,
+      "max_prompt_tokens": 2932
+    },
+    {
+      "id": "u10",
+      "question": "독일로 가는 ABS 수출 물량의 2026년 3월 예측치를 알려 주세요.",
+      "expect_tools": [],
+      "called_tools": [
+        "get_forecast"
+      ],
+      "tool_choice_ok": true,
+      "first_try_ok": true,
+      "final_ok": true,
+      "attempts": 1,
+      "n_numbers_first": 3,
+      "n_numbers_final": 3,
+      "unsupported_first": [],
+      "unsupported_final": [],
+      "issues_first": [],
+      "issues_final": [],
+      "redacted": 0,
+      "answer_kind": "text_ids",
+      "delivered_ok": true,
+      "max_prompt_tokens": 2135
+    }
+  ],
+  "semantic_review": {
+    "reviewer": "독립 검토 에이전트(Claude) 2개 관점 x 답변 10개: 주장별 사실 확인, 질문에 답했는지·도구 사용",
+    "definition": "통과 = 두 검토자 모두 모든 주장이 그 답변의 도구 결과와 맞다고 보고, 질문에도 답했다고 본 경우",
+    "faithful": 5,
+    "passed_numbers_but_unfaithful": 5,
+    "claims_faithful": 8,
+    "answers_question": 5,
+    "right_tool_and_args": 6,
+    "korean_only": 10,
+    "by_id": {
+      "u01": {
+        "faithful": true,
+        "claims_faithful": true,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "문제 없음"
+      },
+      "u02": {
+        "faithful": true,
+        "claims_faithful": true,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "문제 없음"
+      },
+      "u03": {
+        "faithful": false,
+        "claims_faithful": true,
+        "answers_question": false,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "ETS(1.3%)가 가장 많게 잡았다는 결론이 없고 무관한 WAPE 비교를 앞세웠으며 계절 나이브·앙상블 편향은 빠짐"
+      },
+      "u04": {
+        "faithful": false,
+        "claims_faithful": true,
+        "answers_question": false,
+        "right_tool_and_args": false,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "PC 시리즈로 조회하지 않아 테스트 기간 BU·MinT 비교 없이 검증 구간 채택 근거(0.083)만 답함"
+      },
+      "u05": {
+        "faithful": true,
+        "claims_faithful": true,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "문제 없음"
+      },
+      "u06": {
+        "faithful": false,
+        "claims_faithful": true,
+        "answers_question": false,
+        "right_tool_and_args": false,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "ABS 합계 질문에 TOTAL(ABS+PC)을 잘못 조회해 ABS 값 대신 406,113.2톤을 답함"
+      },
+      "u07": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": false,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "2026년 2월은 2026-01~2026-06 예측 범위 안인데 기준 2025-02 백테스트를 불러 잘못 거절함"
+      },
+      "u08": {
+        "faithful": true,
+        "claims_faithful": true,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "문제 없음"
+      },
+      "u09": {
+        "faithful": true,
+        "claims_faithful": true,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "문제 없음"
+      },
+      "u10": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": false,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "독일(ABS-DEU) 시리즈가 없음을 밝히지 않고 ABS 전체 합계 86,146.3톤으로 대신 답함"
+      }
+    }
+  }
+}

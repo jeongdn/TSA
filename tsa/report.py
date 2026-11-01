@@ -1,5 +1,6 @@
 """그림과 RESULTS.md를 만든다. 숫자는 모두 outputs/의 실행 결과 파일에서 읽는다 (손으로 적은 숫자 없음)."""
 import json
+import math
 import subprocess
 
 import matplotlib
@@ -427,12 +428,12 @@ def mint_md(M, MV, FM):
     return "\n".join(L) + "\n"
 
 
-# 에이전트 평가 실행: (파일, 짧은 이름, 설명). 있는 파일만 11절에 싣는다
+# 에이전트 평가 실행. 있는 파일만 11절에 싣고, 질문별 상세 표는 뜻 검토를 한 실행만 싣는다
 AGENT_RUNS = [   # (결과 파일, 짧은 이름, 설명, 질문별 상세 표를 실을지)
     ("agent_eval.json", "개발 1", "처음 에이전트, 개발용 질문 10개 (실행 전에 고정)", True),
     ("agent_eval_dev2.json", "개발 2", "1번 고친 에이전트, 같은 개발용 질문 (고칠 때 본 질문이라 낙관적)", False),
     ("agent_eval_dev3.json", "개발 3", "2번 고친 에이전트, 같은 개발용 질문 (고칠 때 본 질문이라 낙관적)", False),
-    ("agent_eval_dev4.json", "개발 4", "3번 고친 에이전트(2차 동결본), 같은 개발용 질문 (고칠 때 본 질문이라 낙관적)", False),
+    ("agent_eval_dev4.json", "개발 4", "3번 고친 에이전트(2차 동결본), 같은 개발용 질문 (고칠 때 본 질문이라 낙관적)", True),
     ("agent_eval_test_v1.json", "테스트·처음", "처음 에이전트(개발 1과 같은 코드, 질문 파일만 바꿔 별도 worktree에서), 테스트 "
                                               "질문 10개 (동결본 결과를 본 뒤 비교용으로 정해 돌림)", True),
     ("agent_eval_test.json", "테스트·동결본", "2차 동결본(태그 `freeze-agent`), 테스트 질문 10개 (독립 에이전트가 작성, 고친 "
@@ -443,6 +444,22 @@ AGENT_RUNS = [   # (결과 파일, 짧은 이름, 설명, 질문별 상세 표�
     ("agent_eval_t2_v2.json", "테스트2·2차", "2차 동결본(`freeze-agent`), 같은 테스트2 질문 (한 번)", True),
     ("agent_eval_t2_v3.json", "테스트2·3차", "3차 동결본(`freeze-agent-v3`), 같은 테스트2 질문 (한 번)", True),
 ]
+# 같은 질문으로 돌린 두 실행의 짝 비교 (짧은 이름)
+AGENT_PAIRS = [("테스트·처음", "테스트·동결본"), ("테스트2·처음", "테스트2·2차"), ("테스트2·처음", "테스트2·3차"),
+               ("테스트2·2차", "테스트2·3차")]
+
+
+def mcnemar(A, B, key="faithful"):
+    """같은 질문에서 A만 뜻 검토를 통과한 개수, B만 통과한 개수, 맥니마 정확 검정의 양쪽 p값.
+    결과가 갈린 질문만 쓰고, 그 안에서 'A만 통과'의 개수가 이항분포(n, 0.5)를 따른다고 보고 계산한다.
+    key: 'faithful'(통과) 또는 'claims_faithful'(주장이 모두 맞음)."""
+    a, b = A["semantic_review"]["by_id"], B["semantic_review"]["by_id"]
+    assert set(a) == set(b), "두 실행의 질문이 다르다"
+    only_a = sum(a[k][key] and not b[k][key] for k in a)
+    only_b = sum(b[k][key] and not a[k][key] for k in a)
+    n = only_a + only_b
+    p = min(1.0, 2 * sum(math.comb(n, i) for i in range(min(only_a, only_b) + 1)) / 2 ** n) if n else 1.0
+    return only_a, only_b, p
 
 
 def agent_md(runs):
@@ -452,10 +469,18 @@ def agent_md(runs):
          f"- 모델 `{A0['model']}` (OpenAI 호환 API, {A0['endpoint_host']}). 질문 파일은 모두 실행 전에 커밋해 고정했다.",
          "- 숫자 검사: 답변의 숫자가 도구 결과나 질문에 있는가 (부호는 비교하지 않음). 걸리면 알려 주고 다시 쓰게 한다. "
          "버전별: 처음 에이전트·개발 2는 한 번 다시 쓰기, 개발 3부터 두 번까지. 기간 불일치·한자 검사는 개발 2부터, "
-         "끝까지 걸린 문장을 빼고 보여 주는 안전장치는 개발 3부터, 범위 밖 질문 검사는 개발 4(동결본)부터.",
+         "끝까지 걸린 문장을 빼고 보여 주는 안전장치는 개발 3부터, 범위 밖 질문 검사는 개발 4(2차 동결본)부터.",
+         "- 3차: 모델은 코드가 도구 결과로 만든 사실 문장의 id만 고르고, 답은 고른 문장을 그대로 잇는다. 숫자 검사에 걸려도 "
+         "다시 쓰게 하지 않고 걸린 문장을 뺀다. 보호 장치: 질문한 기간이 모델이 부른 도구 결과에 없거나(기준 시점을 잘못 넣으면 "
+         "범위 안의 질문도 걸린다), 질문에 목록에 있는 다른 제품 이름(PP 등)이 있고 ABS·PC 이야기가 없으면 코드가 '답할 수 "
+         "없음'과 범위 안내로 바꾼다. 이 문장은 숫자 검사를 건너뛰고 통과로 센다.",
+         "- 숫자 검사 칸은 버전마다 잰 방식이 다르다. 처음 에이전트 줄은 기간 검사가 없던 그때의 검사이고, 3차 줄은 보호 "
+         "장치가 바꾼 뒤의 답 기준이다. 같은 검사로 다시 본 값은 WORKLOG 16절에 있다.",
          "- 뜻 검토: 기록 원본만 받은 검토 에이전트(Claude, 고친 세션과 같은 모델이라 완전히 독립은 아님)가 두 관점(주장별 "
          "사실 확인 / 질문에 답했는지·도구 사용)으로 보여 준 답을 판정했다. 통과 = 두 검토자 모두 모든 주장이 그 답변의 도구 "
-         "결과와 맞다고 보고, 질문에도 답했다고 본 경우. '알맞은 도구·인자'만은 '질문에 답했는지' 관점 검토자의 판정이다.\n",
+         "결과와 맞다고 보고, '질문에 답했는지' 관점 검토자가 질문에 답했다고 본 경우. '질문에 답함'과 '알맞은 도구·인자'는 "
+         "그 검토자 한 명의 판정이다. 검토자는 답변 파일 이름으로 버전을 알 수 있었고, 실행마다 새로 띄웠다. 읽는 파일도 "
+         "막지 않아서, 일부 검토자는 이전 실행의 판정 파일과 git 기록을 봤다.\n",
          "| 실행 | 에이전트와 질문 | 숫자 검사 통과 (첫 답변 / 최종) | 보여 준 답의 숫자 검사 | 기대한 도구를 부름 | "
          "뜻 검토 통과 | 가장 긴 요청 (토큰) |",
          "|---|---|---|---|---|---|---|"]
@@ -467,8 +492,31 @@ def agent_md(runs):
         L.append(f"| {short} | {desc} | {A['first_try_ok']}/{n} / {A['final_ok']}/{n} | {shown}/{n} | "
                  f"{A['tool_choice_ok']}/{n} | {sem} | {tok} |")
     L.append("")
-    L.append("질문이 실행마다 10개뿐이라 몇 개 차이는 우연일 수 있다. 고치기 전과 후를 공정하게 비교하는 것은 같은 테스트 "
-             "질문으로 돌린 '테스트·처음'과 '테스트·동결본' 두 줄이다 (개발 실행은 고칠 때 본 질문이라 낙관적).")
+    L.append("질문이 실행마다 10개뿐이라 몇 개 차이는 우연일 수 있다. 버전을 공정하게 비교하는 것은 같은 질문으로 돌린 "
+             "'테스트' 두 줄과 '테스트2' 세 줄이다. 개발 실행과 3차의 '개발용'·'테스트' 줄은 고칠 때 본 질문이라 낙관적이다. "
+             "테스트2 질문은 3차를 동결하기 전에 독립 에이전트가 따로 썼고, 에이전트를 고친 세션은 세 버전을 한 번씩 돌릴 "
+             "때까지 질문을 열지 않았다 (기록일 뿐 확인할 장치는 없다). 다만 테스트2 질문 칸은 1차 테스트를 따라 정했고, 3차는 "
+             "1차 테스트 질문을 보며 고쳤으므로 테스트2는 3차에 유리할 수 있다.")
+    by = {short: A for short, _, A, _ in runs}
+    pairs = [(x, y) for x, y in AGENT_PAIRS
+             if x in by and y in by and by[x].get("semantic_review") and by[y].get("semantic_review")]
+    if pairs:
+        L.append("")
+        L.append("같은 질문 짝 비교 (뜻 검토 통과 기준, 맥니마 정확 검정, 양쪽):")
+        L.append("")
+        for x, y in pairs:
+            only_x, only_y, p = mcnemar(by[x], by[y])
+            L.append(f"- {x} {by[x]['semantic_review']['faithful']}/{by[x]['n_questions']} vs "
+                     f"{y} {by[y]['semantic_review']['faithful']}/{by[y]['n_questions']}: "
+                     f"{x}만 통과 {only_x}개, {y}만 통과 {only_y}개, p = {p:.3f}")
+        L.append("")
+        L.append("참고 (테스트2 결과를 본 뒤 고른 지표라 미리 정한 비교가 아님): '주장이 모두 맞음'만 기준으로 같은 짝 비교.")
+        L.append("")
+        for x, y in pairs:
+            only_x, only_y, p = mcnemar(by[x], by[y], "claims_faithful")
+            L.append(f"- {x} {by[x]['semantic_review']['claims_faithful']}/{by[x]['n_questions']} vs "
+                     f"{y} {by[y]['semantic_review']['claims_faithful']}/{by[y]['n_questions']}: "
+                     f"{x}만 맞음 {only_x}개, {y}만 맞음 {only_y}개, p = {p:.3f}")
     for short, desc, A, detail in runs:
         if not detail:
             continue
@@ -476,15 +524,17 @@ def agent_md(runs):
         L.append("")
         L.append(f"### {short}: {desc}")
         L.append("")
-        L.append(f"실행 {A['created']}" + (f", 에이전트 커밋 `{A['agent_commit']}`" if A.get("agent_commit") else "")
+        L.append(f"실행이 끝난 시각 {A['created']}" +(f", 에이전트 커밋 `{A['agent_commit']}`" if A.get("agent_commit") else "")
                  + f". 답변 속 숫자 {A['numbers_first_try']}개 중 근거 없는 숫자 {A['unsupported_first_try']}개 (첫 답변)"
                  + (f", 기간 불일치·한자 문제 {A['issues_first_try']}건 (첫 답변)" if "issues_first_try" in A else "") + "."
-                 + (f" 다시 써도 걸려서 안전장치로 문장을 뺀 답변 {A['redacted_answers']}개 (보여 준 답의 숫자 검사 통과 "
-                    f"{A['delivered_ok']}/{n})." if "redacted_answers" in A else ""))
+                 + (f" {'숫자 검사에 걸려' if A.get('agent_version') == 'v3' else '다시 써도 걸려서 안전장치로'} 문장을 뺀 "
+                    f"답변 {A['redacted_answers']}개 (보여 준 답의 숫자 검사 통과 {A['delivered_ok']}/{n})."
+                    if "redacted_answers" in A else ""))
         kinds = A.get("answer_kinds", {})
         if any(k != "text" for k in kinds):
-            names = {"final": "final_answer로 고름", "text_ids": "글에 적은 id를 읽음", "guard": "범위 밖이라 '답할 수 없음'으로 바꿈",
-                     "none": "고르지 못함('답을 만들지 못했습니다')"}
+            names = {"final": "final_answer로 고름", "text_ids": "글에 적은 id를 읽음",
+                     "guard": "질문한 기간이 도구 결과에 없거나 자료 밖 제품이라 보호 장치가 '답할 수 없음'으로 바꿈",
+                     "none": "고르지 못함('도구 결과로 확인할 수 있는 답을 만들지 못했습니다')"}
             L.append("3차 답이 만들어진 방식: " + ", ".join(f"{names.get(k, k)} {v}" for k, v in kinds.items()) + ".")
         if sr:
             L.append(f"뜻 검토 항목별: 주장이 모두 맞음 {sr['claims_faithful']}/{n}, 질문에 답함 {sr['answers_question']}/{n}, "

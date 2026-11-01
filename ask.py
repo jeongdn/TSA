@@ -37,7 +37,8 @@ def _git_head():
     try:
         run = lambda *a: subprocess.run(["git", *a], cwd=config.ROOT, capture_output=True, text=True,  # noqa: E731
                                         check=True).stdout.strip()
-        dirty = run("status", "--porcelain", "--", "tsa/qa_agent.py", "tsa/qa_tools.py", "tsa/numcheck.py", "ask.py")
+        dirty = run("status", "--porcelain", "--", "tsa/qa_agent.py", "tsa/qa_agent3.py", "tsa/qa_facts.py",
+                    "tsa/qa_tools.py", "tsa/numcheck.py", "tsa/config.py", "tsa/metrics.py", "ask.py")
         return run("rev-parse", "--short", "HEAD") + ("+dirty" if dirty else "")
     except Exception:
         return "n/a"
@@ -45,7 +46,7 @@ def _git_head():
 
 def answer_kind(out):
     """답이 어떻게 만들어졌나: text(2차, 모델이 쓴 글), final(3차, final_answer 호출), text_ids(3차, 글에 적은 id),
-    guard(3차, 범위 밖이라 '답할 수 없음'으로 바꿈), none(3차, 답을 고르지 못함)."""
+    guard(3차, 질문한 기간이 도구 결과에 없거나 자료 밖 제품이라 보호 장치가 '답할 수 없음'으로 바꿈), none(3차, 답을 고르지 못함)."""
     if "final" not in out:
         return "text"
     if out.get("guard"):
