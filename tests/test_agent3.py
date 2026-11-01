@@ -37,11 +37,11 @@ def last_facts(messages):
 
 def test_facts():
     r = qa_tools.get_backtest()
-    f = qa_facts.build("get_backtest", r)
+    f = [t for _, t in qa_facts.build("get_backtest", r)]
     best = min(r["models"], key=lambda k: r["models"][k]["wape_pct"])
     assert any(f"가장 낮은 모델은 {best}" in t for t in f)
     t = qa_tools.get_forecast("TOTAL")
-    ft = qa_facts.build("get_forecast", t)
+    ft = [x for _, x in qa_facts.build("get_forecast", t)]
     lo = min(t["rows"], key=lambda x: x["forecast_t"])["target"]
     hi = max(t["rows"], key=lambda x: x["forecast_t"])["target"]
     assert any(f"가장 많은 달은 {hi}" in x and f"가장 적은 달은 {lo}" in x for x in ft)
@@ -51,7 +51,7 @@ def test_facts():
                        ("get_forecast", {"series": "PC-IND", "h": [4, 5, 6]}),
                        ("get_forecast", {"series": "ABS-TUR", "origin": "2024-12", "h": [2]})]:
         r = qa_tools.call(name, args)
-        texts = qa_facts.build(name, r)
+        texts = [x for _, x in qa_facts.build(name, r)]
         assert texts and numcheck.check(" ".join(texts), [{"name": name, "result": r}])["ok"], (name, args)
     assert qa_facts.ida("앙상블(15.1%)") == "앙상블(15.1%)이다" and qa_facts.ida("ETS") == "ETS다"
     assert qa_facts.eun("LightGBM") == "LightGBM은" and qa_facts.eun("계절 나이브") == "계절 나이브는"
@@ -80,10 +80,19 @@ def test_bad_ids_and_text_answers_are_sent_back():
 
 
 def test_text_tool_call_for_final_answer():
-    raw = '<tool_call>{"name": "final_answer", "arguments": {"answerable": true, "fact_ids": ["1-2"]}}</tool_call>'
+    raw = '<tool_call>{"name": "final_answer", "arguments": {"answerable": true, "fact_ids": ["1:최저모델"]}}</tool_call>'
     llm = Scripted([call("get_backtest", {}), {"role": "assistant", "content": raw}])
     out = qa_agent3.ask("오차가 가장 작은 모델은?", llm)
-    assert out["final"] == {"answerable": True, "fact_ids": ["1-2"]} and "가장 낮은 모델" in out["answer"]
+    assert out["final"] == {"answerable": True, "fact_ids": ["1:최저모델"]} and "가장 낮은 모델" in out["answer"]
+
+
+def test_ids_written_in_text():
+    """도구 호출 대신 글에 id를 적어도, 실제로 있는 id만 글에 나온 순서대로 읽는다."""
+    llm = Scripted([call("get_forecast", {"series": "PC-IND", "h": [4, 5, 6]}),
+                    {"role": "assistant", "content": "답: 1:2026-05-예측, 1:2026-04-예측, 1:없는-id"}])
+    out = qa_agent3.ask("인도향 PC 4~5월 예측은?", llm)
+    assert out["final"]["fact_ids"] == ["1:2026-05-예측", "1:2026-04-예측"], out["final"]
+    assert out["answer"].index("2026-05") < out["answer"].index("2026-04") and out["ok"]
 
 
 def test_unanswerable_and_out_of_range():

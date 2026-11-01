@@ -18,7 +18,8 @@ SYSTEM = f"""너는 한국의 ABS·PC 수출 수요예측 프로젝트 결과를
    - n개월 앞 성능 -> get_backtest(h=[n]) (series 없이). 시리즈 하나의 성능 -> get_backtest(series=시리즈).
    - 앞으로의 예측 물량 -> get_forecast(series=시리즈). 과거 기준 시점에서 낸 예측과 실제값 -> get_forecast(series=시리즈, origin='YYYY-MM').
    - 시리즈는 질문한 제품·국가와 같아야 한다. 'ABS 합계·ABS 전체'는 ABS, 'PC 합계'는 PC, 'ABS와 PC를 합친 전체'는 TOTAL, 나라 하나는 '제품-국가'(예: ABS-CHN)다.
-2. 도구 결과의 facts는 코드가 만든 사실 문장이다. 질문에 답하는 문장의 id만 질문 순서대로 골라 final_answer(answerable=true, fact_ids=[...])를 부른다. 질문한 대상(제품·국가·달·모델)이 그대로 나오는 문장만 고른다. 질문이 여러 가지를 물으면 각각에 맞는 문장을 모두 고른다.
+   - 질문한 달·시점만 필요하면 h로 좁혀 부른다 (예: 2026년 4~6월이면 h=[4, 5, 6]).
+2. 도구 결과의 facts는 코드가 만든 사실 문장이다. id는 '호출번호:내용'이다 (예: '1:2026-04-예측', '1:최저모델', '2:ABS-MEX-모델별WAPE'). 질문에 답하는 문장의 id만 질문 순서대로 골라 final_answer(answerable=true, fact_ids=[...])를 부른다. 질문한 대상(제품·국가·달·모델)이 그대로 나오는 문장만 고른다. 질문이 여러 가지를 물으면 각각에 맞는 문장을 모두 고른다.
 3. 도구 결과로 답할 수 없으면(자료에 없는 제품, {qa_tools.FIRST} ~ {qa_tools.LAST} 밖의 미래 기간 등) 도구로 확인한 뒤 final_answer(answerable=false, fact_ids=[그 이유를 보여 주는 문장 id])를 부른다.
 4. 글로 직접 답하지 않는다. 답은 final_answer로만 한다."""
 
@@ -31,20 +32,21 @@ FINAL = {"type": "function", "function": {
                      "description": "고른 사실 문장 id (예: '1-2'), 답할 순서대로"}},
         "required": ["answerable", "fact_ids"]}}}
 NUDGE_TOOL = "답하기 전에 알맞은 도구(get_backtest 또는 get_forecast)를 먼저 부르세요."
-NUDGE_FINAL = "글로 답하지 말고, 도구 결과 facts의 id를 골라 final_answer를 부르세요."
+NUDGE_FINAL = ("글로 답하지 말고, 도구 결과 facts의 id를 골라 final_answer를 부르세요. 도구 호출이 어려우면 답에 쓸 id만 "
+               "'1:2026-04-예측, 1:2026-05-예측'처럼 적어도 됩니다.")
 REFUSE = "질문하신 내용은 이 프로젝트의 도구 결과로 답할 수 없습니다."
 EMPTY = "도구 결과로 확인할 수 있는 답을 만들지 못했습니다."
 
 
 def view(name, result, k, facts):
     """LLM에 보내는 도구 결과: 무엇을 조회했는지와 사실 문장(id 붙임)만. 전체 결과는 기록(log)에 남는다.
-    id는 'k-j' (k번째 도구 호출의 j번째 문장)라 여러 번 불러도 겹치지 않는다."""
+    id는 'k:키' (k번째 도구 호출, 키는 문장의 뜻: '2026-04-예측' 등)라 여러 번 불러도 겹치지 않는다."""
     if "error" in result:
         return result
     items = []
-    for j, text in enumerate(qa_facts.build(name, result), 1):
-        facts[f"{k}-{j}"] = text
-        items.append({"id": f"{k}-{j}", "text": text})
+    for key, text in qa_facts.build(name, result):
+        facts[f"{k}:{key}"] = text
+        items.append({"id": f"{k}:{key}", "text": text})
     head = {key: result[key] for key in ("series", "origin", "h", "kind", "origin_note") if key in result}
     return {**head, "facts": items}
 
@@ -79,6 +81,12 @@ def _final_args(call):
     return (flag if isinstance(flag, bool) else str(flag).lower() != "false"), [str(x).strip(" '\"") for x in ids]
 
 
+def ids_in_text(text, facts):
+    """도구 호출 대신 글에 id를 적은 경우: 글에 나온 순서대로, 실제로 있는 id만 고른다."""
+    found = [(text.find(i), i) for i in facts if i in (text or "")]
+    return [i for _, i in sorted(found)]
+
+
 def render(answerable, ids, facts):
     texts = [facts[i] for i in dict.fromkeys(ids) if i in facts]
     if not answerable:
@@ -100,12 +108,17 @@ def ask(question, llm, max_steps=10, max_fixes=2):
     tools = qa_tools.specs() + [FINAL]
     names = set(qa_tools.FUNCS) | {"final_answer"}
     messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": question}]
-    log, facts, nudges, fixes, final = [], {}, 0, 0, None
+    log, facts, nudges, fixes, final, texts = [], {}, 0, 0, None, []
     for _ in range(max_steps):
         msg = llm(messages, tools)
         calls = msg.get("tool_calls") or text_tool_calls(msg.get("content"), names)
         messages.append({"role": "assistant", "content": msg.get("content"), **({"tool_calls": calls} if calls else {})})
-        if not calls:                              # 글로 답함: 도구부터 부르거나 final_answer로 답하게 돌려보낸다
+        if not calls:                              # 글로 답함: 글에 id가 있으면 그것으로, 없으면 돌려보낸다
+            texts.append(msg.get("content") or "")
+            picked = ids_in_text(msg.get("content"), facts)
+            if picked:
+                final = {"answerable": True, "fact_ids": picked, "from_text": True}
+                break
             if nudges >= 2:
                 break
             nudges += 1
@@ -147,4 +160,4 @@ def ask(question, llm, max_steps=10, max_fixes=2):
     return {"question": question, "answer": shown, "model_answer": json.dumps(final, ensure_ascii=False),
             "ok": check["ok"], "check": check, "redacted": removed, "attempts": [{"answer": answer, "check": check}],
             "tool_calls": log, "final": final, "answerable": answerable, "nudges": nudges, "fixes": fixes,
-            "guard": guard, "n_facts": len(facts)}
+            "guard": guard, "n_facts": len(facts), "model_texts": texts}
