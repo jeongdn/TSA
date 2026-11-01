@@ -33,11 +33,11 @@ def show(out):
 
 
 def _git_head():
-    """평가에 쓴 에이전트 코드의 커밋 (커밋 안 된 변경이 있으면 '+dirty')."""
+    """평가에 쓴 에이전트 코드의 커밋. 에이전트 파일에 커밋 안 된 변경이 있으면 '+dirty'."""
     try:
         run = lambda *a: subprocess.run(["git", *a], cwd=config.ROOT, capture_output=True, text=True,  # noqa: E731
                                         check=True).stdout.strip()
-        dirty = run("status", "--porcelain", "--", "tsa", "ask.py")
+        dirty = run("status", "--porcelain", "--", "tsa/qa_agent.py", "tsa/qa_tools.py", "tsa/numcheck.py", "ask.py")
         return run("rev-parse", "--short", "HEAD") + ("+dirty" if dirty else "")
     except Exception:
         return "n/a"
@@ -46,6 +46,7 @@ def _git_head():
 def run_eval(llm, questions, name):
     qs = json.loads(Path(questions).read_text(encoding="utf-8"))
     suffix = f"_{name}" if name else ""
+    commit = _git_head()                     # 실행을 시작할 때의 에이전트 코드
     rows, full = [], []
     for i, q in enumerate(qs, 1):
         n0 = len(llm.prompt_tokens)
@@ -67,7 +68,7 @@ def run_eval(llm, questions, name):
               f"최종 {'통과' if out['ok'] else '실패'}, 도구 {called}")     # 질문 문장은 찍지 않는다
     A = {"created": datetime.now().isoformat(timespec="seconds"), "model": llm.model,
          "endpoint_host": urlparse(llm.base_url).netloc, "questions_file": Path(questions).as_posix(),
-         "agent_commit": _git_head(), "n_questions": len(rows),
+         "agent_commit": commit, "n_questions": len(rows),
          "first_try_ok": sum(r["first_try_ok"] for r in rows), "final_ok": sum(r["final_ok"] for r in rows),
          "tool_choice_ok": sum(r["tool_choice_ok"] for r in rows),
          "numbers_first_try": sum(r["n_numbers_first"] for r in rows),
