@@ -351,5 +351,117 @@
         "summary_ko": "독일 시리즈가 없다는 결론 없이 도구 오류문을 옮겨 사용자에게 재시도를 요구함"
       }
     }
+  },
+  "semantic_review_blind": {
+    "reviewer": "가린 재검토: 독립 검토 에이전트(Claude) 2개 관점. 버전을 알려 주는 항목을 빼고 질문 묶음별로 섞어 새 id를 붙였고, 읽을 파일을 묶음 파일과 tsa/qa_tools.py·metrics.py·config.py로 정함",
+    "definition": "통과 = 두 검토자 모두 모든 주장이 그 답변의 도구 결과와 맞다고 보고, '질문에 답했는지' 관점 검토자가 질문에 답했다고 본 경우",
+    "faithful": 5,
+    "passed_numbers_but_unfaithful": 5,
+    "claims_faithful": 6,
+    "answers_question": 5,
+    "right_tool_and_args": 7,
+    "korean_only": 10,
+    "by_id": {
+      "u01": {
+        "faithful": true,
+        "claims_faithful": true,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "문제 없음",
+        "rid": "B11"
+      },
+      "u02": {
+        "faithful": true,
+        "claims_faithful": true,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "문제 없음",
+        "rid": "B08"
+      },
+      "u03": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "과대 예측이 가장 컸던 건 ETS(편향 1.3%)인데 계절 나이브(편향 0.0%)라 하고 WAPE 감소율 25.6%를 편향처럼 씀",
+        "rid": "B14"
+      },
+      "u04": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "채택은 BU인데 조정 전(6.8%)이 채택됐다고 틀리게 말하고 BU·MinT 비교는 직접 답하지 않음",
+        "rid": "B06"
+      },
+      "u05": {
+        "faithful": true,
+        "claims_faithful": true,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "문제 없음",
+        "rid": "B04"
+      },
+      "u06": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": false,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "830,870.4톤은 ABS가 아닌 TOTAL의 6개월 합계인데 ABS 4~6월 3개월 합계로 답함",
+        "rid": "B12"
+      },
+      "u07": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": false,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "기준 시점 2025-02 백테스트만 불러 놓고 2026년 2월 예측이 없다고 근거 없이 답함",
+        "rid": "B21"
+      },
+      "u08": {
+        "faithful": true,
+        "claims_faithful": true,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "문제 없음",
+        "rid": "B13"
+      },
+      "u09": {
+        "faithful": true,
+        "claims_faithful": true,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "문제 없음",
+        "rid": "B18"
+      },
+      "u10": {
+        "faithful": false,
+        "claims_faithful": true,
+        "answers_question": false,
+        "right_tool_and_args": false,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "독일 시리즈가 없다는 설명 없이 도구 오류와 코드 목록만 옮기고 사용자에게 재시도를 떠넘김",
+        "rid": "B25"
+      }
+    }
   }
 }

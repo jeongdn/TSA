@@ -449,11 +449,12 @@ AGENT_PAIRS = [("테스트·처음", "테스트·동결본"), ("테스트2·처�
                ("테스트2·2차", "테스트2·3차")]
 
 
-def mcnemar(A, B, key="faithful"):
+def mcnemar(A, B, key="faithful", review="semantic_review"):
     """같은 질문에서 A만 뜻 검토를 통과한 개수, B만 통과한 개수, 맥니마 정확 검정의 양쪽 p값.
     결과가 갈린 질문만 쓰고, 그 안에서 'A만 통과'의 개수가 이항분포(n, 0.5)를 따른다고 보고 계산한다.
-    key: 'faithful'(통과) 또는 'claims_faithful'(주장이 모두 맞음)."""
-    a, b = A["semantic_review"]["by_id"], B["semantic_review"]["by_id"]
+    key: 'faithful'(통과) 또는 'claims_faithful'(주장이 모두 맞음). review: 'semantic_review'(원래 검토) 또는
+    'semantic_review_blind'(가린 재검토)."""
+    a, b = A[review]["by_id"], B[review]["by_id"]
     assert set(a) == set(b), "두 실행의 질문이 다르다"
     only_a = sum(a[k][key] and not b[k][key] for k in a)
     only_b = sum(b[k][key] and not a[k][key] for k in a)
@@ -465,6 +466,7 @@ def mcnemar(A, B, key="faithful"):
 def agent_md(runs):
     """11절: 질의응답 에이전트 평가. runs = [(짧은 이름, 설명, ask.py --eval이 쓴 JSON)]."""
     A0 = runs[0][2]
+    blind = any(A.get("semantic_review_blind") for _, _, A, _ in runs)
     L = ["\n## 11. 질의응답 에이전트 (7번)\n",
          f"- 모델 `{A0['model']}` (OpenAI 호환 API, {A0['endpoint_host']}). 질문 파일은 모두 실행 전에 커밋해 고정했다.",
          "- 숫자 검사: 답변의 숫자가 도구 결과나 질문에 있는가 (부호는 비교하지 않음). 걸리면 알려 주고 다시 쓰게 한다. "
@@ -482,15 +484,16 @@ def agent_md(runs):
          "그 검토자 한 명의 판정이다. 검토자는 답변 파일 이름으로 버전을 알 수 있었고, 실행마다 새로 띄웠다. 읽는 파일도 "
          "막지 않아서, 일부 검토자는 이전 실행의 판정 파일과 git 기록을 봤다.\n",
          "| 실행 | 에이전트와 질문 | 숫자 검사 통과 (첫 답변 / 최종) | 보여 준 답의 숫자 검사 | 기대한 도구를 부름 | "
-         "뜻 검토 통과 | 가장 긴 요청 (토큰) |",
-         "|---|---|---|---|---|---|---|"]
+         "뜻 검토 통과 |" + (" 가린 재검토 통과 |" if blind else "") + " 가장 긴 요청 (토큰) |",
+         "|---|---|---|---|---|---|" + ("---|" if blind else "") + "---|"]
     for short, desc, A, _ in runs:
-        n, sr = A["n_questions"], A.get("semantic_review")
+        n, sr, sb = A["n_questions"], A.get("semantic_review"), A.get("semantic_review_blind")
         sem = f"{sr['faithful']}/{n}" if sr else "-"
         tok = f"{A['max_prompt_tokens']:,}" if A.get("max_prompt_tokens") else "-"
         shown = A.get("delivered_ok", A["final_ok"])        # 안전장치가 없던 실행은 모델 답을 그대로 보여 줬다
+        cell = f" {sb['faithful']}/{n} |" if sb else (" - |" if blind else "")
         L.append(f"| {short} | {desc} | {A['first_try_ok']}/{n} / {A['final_ok']}/{n} | {shown}/{n} | "
-                 f"{A['tool_choice_ok']}/{n} | {sem} | {tok} |")
+                 f"{A['tool_choice_ok']}/{n} | {sem} |" + cell + f" {tok} |")
     L.append("")
     L.append("질문이 실행마다 10개뿐이라 몇 개 차이는 우연일 수 있다. 버전을 공정하게 비교하는 것은 같은 질문으로 돌린 "
              "'테스트' 두 줄과 '테스트2' 세 줄이다. 개발 실행과 3차의 '개발용'·'테스트' 줄은 고칠 때 본 질문이라 낙관적이다. "
@@ -517,14 +520,42 @@ def agent_md(runs):
             L.append(f"- {x} {by[x]['semantic_review']['claims_faithful']}/{by[x]['n_questions']} vs "
                      f"{y} {by[y]['semantic_review']['claims_faithful']}/{by[y]['n_questions']}: "
                      f"{x}만 맞음 {only_x}개, {y}만 맞음 {only_y}개, p = {p:.3f}")
+    if blind:
+        L.append("")
+        L.append("가린 재검토: 같은 답을 버전을 알려 주는 항목을 빼고 질문 묶음별로 섞어 다시 검토했다 (계획은 실행 전에 "
+                 "WORKLOG 16절에 적음). 주 지표는 위의 원래 검토이고, 이것은 검토 조건을 바꿔도 결론이 유지되는지 보는 확인이다.")
+        L.append("")
+        same_all = n_all = 0
+        for short, _, A, _ in runs:
+            if not A.get("semantic_review_blind"):
+                continue
+            o, b = A["semantic_review"]["by_id"], A["semantic_review_blind"]["by_id"]
+            same = sum(o[k]["faithful"] == b[k]["faithful"] for k in o)
+            only_o = sum(o[k]["faithful"] and not b[k]["faithful"] for k in o)
+            only_b = sum(b[k]["faithful"] and not o[k]["faithful"] for k in o)
+            same_all, n_all = same_all + same, n_all + len(o)
+            L.append(f"- {short}: 원래 {A['semantic_review']['faithful']}/{len(o)}, 가린 재검토 "
+                     f"{A['semantic_review_blind']['faithful']}/{len(o)}. 통과 판정이 같은 질문 {same}/{len(o)} "
+                     f"(원래만 통과 {only_o}, 가린 재검토만 통과 {only_b})")
+        L.append(f"- 모두 합쳐 통과 판정이 같은 답 {same_all}/{n_all}")
+        bpairs = [(x, y) for x, y in pairs if by[x].get("semantic_review_blind") and by[y].get("semantic_review_blind")]
+        if bpairs:
+            L.append("")
+            L.append("가린 재검토 기준 같은 질문 짝 비교 (맥니마 정확 검정, 양쪽):")
+            L.append("")
+            for x, y in bpairs:
+                only_x, only_y, p = mcnemar(by[x], by[y], review="semantic_review_blind")
+                L.append(f"- {x} {by[x]['semantic_review_blind']['faithful']}/{by[x]['n_questions']} vs "
+                         f"{y} {by[y]['semantic_review_blind']['faithful']}/{by[y]['n_questions']}: "
+                         f"{x}만 통과 {only_x}개, {y}만 통과 {only_y}개, p = {p:.3f}")
     for short, desc, A, detail in runs:
         if not detail:
             continue
-        n, sr = A["n_questions"], A.get("semantic_review")
+        n, sr, sb = A["n_questions"], A.get("semantic_review"), A.get("semantic_review_blind")
         L.append("")
         L.append(f"### {short}: {desc}")
         L.append("")
-        L.append(f"실행이 끝난 시각 {A['created']}" +(f", 에이전트 커밋 `{A['agent_commit']}`" if A.get("agent_commit") else "")
+        L.append(f"실행이 끝난 시각 {A['created']}" + (f", 에이전트 커밋 `{A['agent_commit']}`" if A.get("agent_commit") else "")
                  + f". 답변 속 숫자 {A['numbers_first_try']}개 중 근거 없는 숫자 {A['unsupported_first_try']}개 (첫 답변)"
                  + (f", 기간 불일치·한자 문제 {A['issues_first_try']}건 (첫 답변)" if "issues_first_try" in A else "") + "."
                  + (f" {'숫자 검사에 걸려' if A.get('agent_version') == 'v3' else '다시 써도 걸려서 안전장치로'} 문장을 뺀 "
@@ -542,14 +573,16 @@ def agent_md(runs):
                      f"보여 준 답이 숫자 검사는 통과했지만 뜻 검토에서 걸린 답변 {sr['passed_numbers_but_unfaithful']}개.")
         red = "redacted_answers" in A
         L += ["", "| 질문 | 부른 도구 | 첫 답변 | 최종 | 첫 답변에서 걸린 것 |" + (" 뺀 문장 |" if red else "")
-              + (" 뜻 검토 |" if sr else ""), "|---|---|---|---|---|" + ("---|" if red else "") + ("---|" if sr else "")]
+              + (" 뜻 검토 |" if sr else "") + (" 가린 재검토 |" if sb else ""),
+              "|---|---|---|---|---|" + ("---|" if red else "") + ("---|" if sr else "") + ("---|" if sb else "")]
         for q in A["questions"]:
             caught = ", ".join(q["unsupported_first"] + q.get("issues_first", [])) or "-"
             row = (f"| {q['question']} | {', '.join(q['called_tools']) or '-'} | {'통과' if q['first_try_ok'] else '실패'} | "
                    f"{'통과' if q['final_ok'] else '실패'} | {caught} |" + (f" {q['redacted']} |" if red else ""))
-            if sr:
-                v = sr["by_id"].get(q["id"], {})
-                row += f" {'맞음' if v.get('faithful') else '문제: ' + v.get('summary_ko', '-')} |"
+            for review in (sr, sb):
+                if review:
+                    v = review["by_id"].get(q["id"], {})
+                    row += f" {'맞음' if v.get('faithful') else '문제: ' + v.get('summary_ko', '-')} |"
             L.append(row)
     L.append("\n숫자 검사는 '답변의 숫자가 도구 결과 어딘가에 있는가'만 본다. 맞는 항목과 짝지었는지까지는 확인하지 않아서 "
              "뜻 검토를 따로 했다. 검토자도 AI라 답변 전문과 판정 전문을 outputs/cache/에 남겼다 (커밋하지 않음, 이 PC에만 "

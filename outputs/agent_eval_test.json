@@ -358,5 +358,117 @@
         "summary_ko": "합계 시리즈 TOTAL의 2026-01 예측 142,404.2톤을 PP 수출로 잘못 답했고 상반기 중 1월만 답함"
       }
     }
+  },
+  "semantic_review_blind": {
+    "reviewer": "가린 재검토: 독립 검토 에이전트(Claude) 2개 관점. 버전을 알려 주는 항목을 빼고 질문 묶음별로 섞어 새 id를 붙였고, 읽을 파일을 묶음 파일과 tsa/qa_tools.py·metrics.py·config.py로 정함",
+    "definition": "통과 = 두 검토자 모두 모든 주장이 그 답변의 도구 결과와 맞다고 보고, '질문에 답했는지' 관점 검토자가 질문에 답했다고 본 경우",
+    "faithful": 5,
+    "passed_numbers_but_unfaithful": 5,
+    "claims_faithful": 5,
+    "answers_question": 5,
+    "right_tool_and_args": 8,
+    "korean_only": 10,
+    "by_id": {
+      "t01": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "최저 오차는 앙상블 15.1%인데 LightGBM 15.2%를 최저로 답했고 모델별 오차율도 누락",
+        "rid": "A12"
+      },
+      "t02": {
+        "faithful": true,
+        "claims_faithful": true,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "문제 없음",
+        "rid": "A04"
+      },
+      "t03": {
+        "faithful": true,
+        "claims_faithful": true,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "문제 없음",
+        "rid": "A18"
+      },
+      "t04": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "1~3개월은 LightGBM, 4~6개월은 ETS가 낮았는데 ETS가 더 낫다고 단정함",
+        "rid": "A01"
+      },
+      "t05": {
+        "faithful": true,
+        "claims_faithful": true,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "문제 없음",
+        "rid": "A10"
+      },
+      "t06": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": false,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "ABS만 물었는데 ABS+PC 전체 합계(TOTAL) 예측을 ABS 값처럼 답함",
+        "rid": "A11"
+      },
+      "t07": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "가장 적은 달은 2026-06(132,828.8톤)인데 2026-02(140,712.3톤)로 잘못 답함",
+        "rid": "A02"
+      },
+      "t08": {
+        "faithful": true,
+        "claims_faithful": true,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "문제 없음",
+        "rid": "A13"
+      },
+      "t09": {
+        "faithful": true,
+        "claims_faithful": true,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "문제 없음",
+        "rid": "A20"
+      },
+      "t10": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": false,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "TOTAL의 2026-01 예측 142,404.2톤을 PP 수출로 잘못 붙임 (PP 시리즈는 없음)",
+        "rid": "A03"
+      }
+    }
   }
 }

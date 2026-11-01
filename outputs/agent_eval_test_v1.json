@@ -310,5 +310,117 @@
         "summary_ko": "도구를 한 번도 부르지 않았는데 '도구 결과에 PP 정보가 없다'며 조회한 것처럼 답함"
       }
     }
+  },
+  "semantic_review_blind": {
+    "reviewer": "가린 재검토: 독립 검토 에이전트(Claude) 2개 관점. 버전을 알려 주는 항목을 빼고 질문 묶음별로 섞어 새 id를 붙였고, 읽을 파일을 묶음 파일과 tsa/qa_tools.py·metrics.py·config.py로 정함",
+    "definition": "통과 = 두 검토자 모두 모든 주장이 그 답변의 도구 결과와 맞다고 보고, '질문에 답했는지' 관점 검토자가 질문에 답했다고 본 경우",
+    "faithful": 3,
+    "passed_numbers_but_unfaithful": 6,
+    "claims_faithful": 4,
+    "answers_question": 4,
+    "right_tool_and_args": 5,
+    "korean_only": 9,
+    "by_id": {
+      "t01": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "앙상블 WAPE 15.1%가 가장 낮은데 LightGBM(15.2%)을 최저로 답했고 모델별 오차율도 뺐다.",
+        "rid": "A14"
+      },
+      "t02": {
+        "faithful": true,
+        "claims_faithful": true,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "문제 없음",
+        "rid": "A07"
+      },
+      "t03": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": false,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "도구 결과는 TOTAL의 WAPE(BU 7.3%)뿐이라 '적게 잡았다'는 주장은 근거가 없다.",
+        "rid": "A19"
+      },
+      "t04": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": false,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "h=1(1개월 앞) WAPE 18.5%·19.7%를 기간 표시 없이 전체 성능처럼 답함",
+        "rid": "A16"
+      },
+      "t05": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": false,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "받은 2026-06 예측 6,428.7톤도 모른다고 답했고, h=6만 불러 4~6월 일부만 받음",
+        "rid": "A06"
+      },
+      "t06": {
+        "faithful": false,
+        "claims_faithful": true,
+        "answers_question": false,
+        "right_tool_and_args": false,
+        "korean_only": false,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "답변 대신 깨진 도구 호출 문자열만 나와 사실 주장이 없음; ABS 대신 TOTAL을 h=6으로만 조회",
+        "rid": "A17"
+      },
+      "t07": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": false,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "h=6으로 2026-06 한 달만 보고 최대 달로 단정했고, 최소 달은 답하지 못함",
+        "rid": "A15"
+      },
+      "t08": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": false,
+        "summary_ko": "예측값과 범위 숫자는 맞으나 80% 예측 구간을 '신뢰 구간'이라고 잘못 부름",
+        "rid": "A08"
+      },
+      "t09": {
+        "faithful": true,
+        "claims_faithful": true,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "문제 없음",
+        "rid": "A09"
+      },
+      "t10": {
+        "faithful": true,
+        "claims_faithful": true,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "문제 없음",
+        "rid": "A05"
+      }
+    }
   }
 }

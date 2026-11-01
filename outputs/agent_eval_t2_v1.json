@@ -314,5 +314,117 @@
         "summary_ko": "문제 없음"
       }
     }
+  },
+  "semantic_review_blind": {
+    "reviewer": "가린 재검토: 독립 검토 에이전트(Claude) 2개 관점. 버전을 알려 주는 항목을 빼고 질문 묶음별로 섞어 새 id를 붙였고, 읽을 파일을 묶음 파일과 tsa/qa_tools.py·metrics.py·config.py로 정함",
+    "definition": "통과 = 두 검토자 모두 모든 주장이 그 답변의 도구 결과와 맞다고 보고, '질문에 답했는지' 관점 검토자가 질문에 답했다고 본 경우",
+    "faithful": 5,
+    "passed_numbers_but_unfaithful": 3,
+    "claims_faithful": 5,
+    "answers_question": 5,
+    "right_tool_and_args": 5,
+    "korean_only": 10,
+    "by_id": {
+      "u01": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": false,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "도구 결과에 없는 '4번 대 2번'을 지어냈고, 기준 시점별 횟수에는 답하지 못함",
+        "rid": "B03"
+      },
+      "u02": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": false,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "미래 예측의 전년 대비 3.8%를 오차율로 잘못 붙이고 LightGBM이 가장 정확하다고 근거 없이 답함",
+        "rid": "B22"
+      },
+      "u03": {
+        "faithful": true,
+        "claims_faithful": true,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "문제 없음",
+        "rid": "B30"
+      },
+      "u04": {
+        "faithful": true,
+        "claims_faithful": true,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "문제 없음",
+        "rid": "B17"
+      },
+      "u05": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": false,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "h=6만 조회해 2026-06 한 달 예측 15,373톤을 1~6월 합계로 답했고 월별 예측도 없음",
+        "rid": "B29"
+      },
+      "u06": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": false,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "ABS가 아닌 TOTAL(ABS+PC 합계)을 조회해 그 값 406,113톤을 ABS 합계로 답함",
+        "rid": "B28"
+      },
+      "u07": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": false,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "h=6 결과(2026-06)의 3.8%를 2026년 2월 전년 대비 변화로 잘못 인용함",
+        "rid": "B26"
+      },
+      "u08": {
+        "faithful": true,
+        "claims_faithful": true,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "문제 없음",
+        "rid": "B15"
+      },
+      "u09": {
+        "faithful": true,
+        "claims_faithful": true,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "문제 없음",
+        "rid": "B20"
+      },
+      "u10": {
+        "faithful": true,
+        "claims_faithful": true,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "문제 없음",
+        "rid": "B07"
+      }
+    }
   }
 }
