@@ -15,4 +15,4 @@ RESULTS.md 11절의 '뜻 검토'와 '테스트 질문'을 만든 스크립트입
 
 합치기 예: `python tools/agent_eval/merge_review.py <검토 결과.json> . agent_eval_test.json`
 
-한계: 검토자도 AI(Claude)이고, 에이전트를 고친 세션과 같은 모델이라 완전히 독립적이지는 않습니다. 검토자는 답변 파일 이름(예: `agent_answers_t2_v3.json`)으로 버전을 알 수 있고, 실행마다 새로 띄우므로 검토자에 따른 흔들림이 결과에 섞입니다. 읽는 파일도 막지 않아서, 일부 검토자는 이전 실행의 판정 파일(`outputs/cache/agent_review*.json`)과 git 기록을 봤습니다. 가린 재검토는 이 두 가지를 줄였지만, 3차 답은 모양이 달라서 버전을 완전히 가리지는 못합니다. 판정 전문은 `outputs/cache/agent_review_*.json`에 남기지만 커밋하지 않습니다.
+한계: 검토자도 AI(Claude)이고, 에이전트를 고친 세션과 같은 모델이라 완전히 독립적이지는 않습니다. 검토자는 답변 파일 이름(예: `agent_answers_t2_v3.json`)으로 버전을 알 수 있고, 실행마다 새로 띄우므로 검토자에 따른 흔들림이 결과에 섞입니다. 읽는 파일도 막지 않아서, 일부 검토자는 이전 실행의 판정 파일(`outputs/cache/agent_review*.json`)과 git 기록을 봤습니다. 가린 재검토는 버전 이름과 이전 판정을 보는 것을 줄였지만, 버전을 완전히 가리지는 못합니다. 처음 에이전트의 도구 결과에는 summary_ko가 없고 3차 답은 모양이 달라 버전 무리는 알아볼 수 있으며, 검토자마다 자기 묶음의 답 전부가 든 파일을 받습니다. 판정 전문은 `outputs/cache/agent_review_*.json`에 남기지만 커밋하지 않습니다.

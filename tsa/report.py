@@ -523,7 +523,10 @@ def agent_md(runs):
     if blind:
         L.append("")
         L.append("가린 재검토: 같은 답을 버전을 알려 주는 항목을 빼고 질문 묶음별로 섞어 다시 검토했다 (계획은 실행 전에 "
-                 "WORKLOG 16절에 적음). 주 지표는 위의 원래 검토이고, 이것은 검토 조건을 바꿔도 결론이 유지되는지 보는 확인이다.")
+                 "WORKLOG 16절에 적음). 주 지표는 위의 원래 검토이고, 이것은 검토 조건을 바꿔도 결론이 유지되는지 보는 확인이다. "
+                 "가림은 완전하지 않다. 처음 에이전트의 도구 결과에는 summary_ko가 없고 3차 답은 모양이 달라 버전 무리는 알아볼 수 "
+                 "있었고, 검토자마다 자기 묶음의 답 전부가 든 파일을 받았다. 두 관점 지시문과 판정 규칙은 원래 검토와 같지만, 가린 "
+                 "재검토에는 숫자 검사 기록과 '숫자 검사가 못 보는 것을 찾으라'는 안내가 없었다.")
         L.append("")
         same_all = n_all = 0
         for short, _, A, _ in runs:
@@ -548,6 +551,14 @@ def agent_md(runs):
                 L.append(f"- {x} {by[x]['semantic_review_blind']['faithful']}/{by[x]['n_questions']} vs "
                          f"{y} {by[y]['semantic_review_blind']['faithful']}/{by[y]['n_questions']}: "
                          f"{x}만 통과 {only_x}개, {y}만 통과 {only_y}개, p = {p:.3f}")
+            L.append("")
+            L.append("참고 (결과를 본 뒤 고른 지표): 가린 재검토 기준 '주장이 모두 맞음' 짝 비교.")
+            L.append("")
+            for x, y in bpairs:
+                only_x, only_y, p = mcnemar(by[x], by[y], "claims_faithful", review="semantic_review_blind")
+                L.append(f"- {x} {by[x]['semantic_review_blind']['claims_faithful']}/{by[x]['n_questions']} vs "
+                         f"{y} {by[y]['semantic_review_blind']['claims_faithful']}/{by[y]['n_questions']}: "
+                         f"{x}만 맞음 {only_x}개, {y}만 맞음 {only_y}개, p = {p:.3f}")
     for short, desc, A, detail in runs:
         if not detail:
             continue
@@ -571,6 +582,9 @@ def agent_md(runs):
             L.append(f"뜻 검토 항목별: 주장이 모두 맞음 {sr['claims_faithful']}/{n}, 질문에 답함 {sr['answers_question']}/{n}, "
                      f"알맞은 도구·인자 {sr['right_tool_and_args']}/{n}, 한국어로만 답함 {sr['korean_only']}/{n}. "
                      f"보여 준 답이 숫자 검사는 통과했지만 뜻 검토에서 걸린 답변 {sr['passed_numbers_but_unfaithful']}개.")
+        if sb:
+            L.append(f"가린 재검토 항목별: 주장이 모두 맞음 {sb['claims_faithful']}/{n}, 질문에 답함 {sb['answers_question']}/{n}, "
+                     f"알맞은 도구·인자 {sb['right_tool_and_args']}/{n}, 한국어로만 답함 {sb['korean_only']}/{n}.")
         red = "redacted_answers" in A
         L += ["", "| 질문 | 부른 도구 | 첫 답변 | 최종 | 첫 답변에서 걸린 것 |" + (" 뺀 문장 |" if red else "")
               + (" 뜻 검토 |" if sr else "") + (" 가린 재검토 |" if sb else ""),
