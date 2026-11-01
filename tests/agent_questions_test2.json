@@ -1,0 +1,70 @@
+[
+  {
+    "id": "u01",
+    "question": "LightGBM이 ETS보다 정확했다고 들었는데, 테스트 기간 내내 꾸준히 그랬나요? 예측을 낸 시점별로 따져 보면 몇 번 중 몇 번이나 ETS보다 나았나요?",
+    "expect_tools": [
+      "get_backtest"
+    ]
+  },
+  {
+    "id": "u02",
+    "question": "반년 뒤 물량, 즉 6개월 앞 예측만 따로 보면 어느 모델이 가장 정확했나요? 그 모델의 오차율도 알려 주세요.",
+    "expect_tools": [
+      "get_backtest"
+    ]
+  },
+  {
+    "id": "u03",
+    "question": "테스트 기간에 실제 수출 물량보다 많게 예측하는 경향이 가장 컸던 모델은 무엇이고, 몇 % 정도 많게 잡았나요?",
+    "expect_tools": [
+      "get_backtest"
+    ]
+  },
+  {
+    "id": "u04",
+    "question": "PC 수출 합계 예측만 놓고 보면, 국가별 예측을 더하는 BU 방식과 MinT 조정 중 테스트 기간에 어느 쪽이 더 정확했나요?",
+    "expect_tools": [
+      "get_backtest"
+    ]
+  },
+  {
+    "id": "u05",
+    "question": "중국향 PC 수출은 2026년 1월부터 6월까지 모두 합쳐 몇 톤이 나갈 것으로 예측되나요? 월별 예측도 함께 알려 주세요.",
+    "expect_tools": [
+      "get_forecast"
+    ]
+  },
+  {
+    "id": "u06",
+    "question": "ABS 수출 합계는 2026년 2분기(4~6월) 석 달 동안 모두 몇 톤으로 예측되나요?",
+    "expect_tools": [
+      "get_forecast"
+    ]
+  },
+  {
+    "id": "u07",
+    "question": "2026년 2월에 ABS와 PC를 합친 전체 수출 물량은 작년 2월과 비교해 얼마나 달라질 것으로 예측되나요?",
+    "expect_tools": [
+      "get_forecast"
+    ]
+  },
+  {
+    "id": "u08",
+    "question": "헝가리로 가는 PC 수출은 2026년 5월에 몇 톤 정도 나갈 것으로 예측되나요?",
+    "expect_tools": [
+      "get_forecast"
+    ]
+  },
+  {
+    "id": "u09",
+    "question": "2023년 12월 실적까지 보고 냈던 인도향 ABS 수출 예측은 2024년 1~3월에 각각 얼마였고, 실제로는 얼마씩 나갔나요?",
+    "expect_tools": [
+      "get_forecast"
+    ]
+  },
+  {
+    "id": "u10",
+    "question": "독일로 가는 ABS 수출 물량의 2026년 3월 예측치를 알려 주세요.",
+    "expect_tools": []
+  }
+]
