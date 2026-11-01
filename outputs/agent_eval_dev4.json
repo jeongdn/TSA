@@ -251,5 +251,107 @@
       "delivered_ok": true,
       "max_prompt_tokens": 2604
     }
-  ]
+  ],
+  "semantic_review": {
+    "reviewer": "독립 검토 에이전트(Claude) 2개 관점 x 답변 10개: 주장별 사실 확인, 질문에 답했는지·도구 사용",
+    "definition": "통과 = 두 검토자 모두 모든 주장이 그 답변의 도구 결과와 맞다고 보고, 질문에도 답했다고 본 경우",
+    "faithful": 4,
+    "passed_numbers_but_unfaithful": 6,
+    "claims_faithful": 4,
+    "answers_question": 7,
+    "right_tool_and_args": 8,
+    "korean_only": 10,
+    "by_id": {
+      "overall": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "WAPE 25.6% 감소(더 좋음)를 '25.6% 낮은 성능'이라 해 거꾸로 말했고, ETS 대비 8.2%는 빠뜨렸다."
+      },
+      "h1": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "부트스트랩 비율 0.542를 '나은 경우 절반 이상'으로 바꿔 말했고, 두 모델 WAPE가 13.7%로 같다는 점은 빠뜨렸다."
+      },
+      "coverage": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "보정 전 적중률 72.5%를 '목표치를 72.5% 달성'으로 잘못 표현했고 목표 80%를 밝히지 않음"
+      },
+      "series_oth": {
+        "faithful": true,
+        "claims_faithful": true,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "문제 없음"
+      },
+      "mint": {
+        "faithful": true,
+        "claims_faithful": true,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "문제 없음"
+      },
+      "fc_abs_chn": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": false,
+        "right_tool_and_args": false,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "72,000.8톤은 1~6월 6개월 합계인데 1~3월 세 달 합계로 잘못 제시함"
+      },
+      "fc_pc": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "'다른 달들은 약간의 감소'가 틀림: 2026-05 예측은 작년 같은 달 대비 +3.4% 증가"
+      },
+      "fc_total": {
+        "faithful": true,
+        "claims_faithful": true,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "문제 없음"
+      },
+      "past_origin": {
+        "faithful": false,
+        "claims_faithful": false,
+        "answers_question": true,
+        "right_tool_and_args": true,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "오차 7.1%는 실제값 대비 비율인데 답변은 '예측값 대비'로 기준을 거꾸로 적음"
+      },
+      "no_data": {
+        "faithful": true,
+        "claims_faithful": true,
+        "answers_question": true,
+        "right_tool_and_args": false,
+        "korean_only": true,
+        "lenses_agree_on_claims": true,
+        "summary_ko": "문제 없음"
+      }
+    }
+  }
 }
