@@ -182,7 +182,7 @@ def _reconciliation():
                 f"검증 구간 2겹 교차 적합의 재표집 중 MinT가 세 수준 모두에서 BU보다 나았던 비율 "
                 f"{FM['gate']['p_better_all']:.3f}, 기준 0.9 -> {FM['adopted']} 채택")
     return {
-        "adopted_method": FM["adopted"], "decision": decision,
+        "adopted_method": FM["adopted"], "decision": decision, "gate_p_better_all": _p(FM["gate"]["p_better_all"]),
         "test_wape_pct": {LEVEL_KO[k]: {METHOD_KO[m]: v for m, v in w[k].items()} for k in LEVEL_KO},
         "test_p_mint_better_than_bu": {LEVEL_KO[k]: _p(b[k]["p_better"]) for k in LEVEL_KO},
         "test_mint_bias_pct": _pct(mt["MinT_shrink"]["by_level"]["bottom"]["Bias"]),
@@ -256,8 +256,9 @@ def _by_h(R, h):
     raw = {k: m[k]["by_h"][str(h)]["WAPE"] for k in MODEL_KO}
     wp = {k: _pct(v) for k, v in raw.items()}
     cov = _pct(iv["static"]["by_h"][str(h)]["coverage"])
-    out = {"h": h, "models_wape_pct": {MODEL_KO[k]: v for k, v in wp.items()},
-           "coverage_cqr_pct": cov, "coverage_before_calibration_pct": _pct(iv["raw"]["by_h"][str(h)]["coverage"])}
+    out = {"h": h, "models_wape_pct": {MODEL_KO[k]: v for k, v in wp.items()}, "best_model": _best(raw, MODEL_KO),
+           "target_coverage_pct": 80, "coverage_cqr_pct": cov,
+           "coverage_before_calibration_pct": _pct(iv["raw"]["by_h"][str(h)]["coverage"])}
     summary = (f"{h}개월 앞 테스트 WAPE: " + ", ".join(f"{MODEL_KO[k]} {v}%" for k, v in wp.items())
                + f". 가장 낮은 모델: {_best(raw, MODEL_KO)}. P10~P90 적중률(CQR 보정 후) {cov}%.")
     if h == 1:

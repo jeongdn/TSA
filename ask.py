@@ -16,7 +16,7 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
-from tsa import config, numcheck, qa_agent
+from tsa import config, numcheck, qa_agent, qa_agent3
 
 
 def show(out):
@@ -43,14 +43,14 @@ def _git_head():
         return "n/a"
 
 
-def run_eval(llm, questions, name):
+def run_eval(llm, questions, name, ask=qa_agent.ask):
     qs = json.loads(Path(questions).read_text(encoding="utf-8"))
     suffix = f"_{name}" if name else ""
     commit = _git_head()                     # 실행을 시작할 때의 에이전트 코드
     rows, full = [], []
     for i, q in enumerate(qs, 1):
         n0 = len(llm.prompt_tokens)
-        out = qa_agent.ask(q["question"], llm)
+        out = ask(q["question"], llm)
         first = out["attempts"][0]["check"]
         called = sorted({t["name"] for t in out["tool_calls"]})
         used = [t for t in llm.prompt_tokens[n0:] if t]
@@ -68,7 +68,7 @@ def run_eval(llm, questions, name):
               f"최종 {'통과' if out['ok'] else '실패'}, 도구 {called}")     # 질문 문장은 찍지 않는다
     A = {"created": datetime.now().isoformat(timespec="seconds"), "model": llm.model,
          "endpoint_host": urlparse(llm.base_url).netloc, "questions_file": Path(questions).as_posix(),
-         "agent_commit": commit, "n_questions": len(rows),
+         "agent_commit": commit, "agent_version": "v3" if ask is qa_agent3.ask else "v2", "n_questions": len(rows),
          "first_try_ok": sum(r["first_try_ok"] for r in rows), "final_ok": sum(r["final_ok"] for r in rows),
          "tool_choice_ok": sum(r["tool_choice_ok"] for r in rows),
          "numbers_first_try": sum(r["n_numbers_first"] for r in rows),
@@ -95,14 +95,17 @@ def main():
     ap.add_argument("--eval", action="store_true")
     ap.add_argument("--questions", default=str(config.ROOT / "tests" / "agent_questions.json"))
     ap.add_argument("--name", default="", help="결과 파일 이름 뒤에 붙일 이름 (예: test -> agent_eval_test.json)")
+    ap.add_argument("--agent", choices=["v2", "v3"], default="v2",
+                    help="v2: 모델이 답을 글로 쓰고 숫자 검사로 거름, v3: 모델은 사실 문장 id만 고르고 글은 코드가 씀")
     args = ap.parse_args()
     llm = qa_agent.OpenAICompatible()
+    ask = qa_agent3.ask if args.agent == "v3" else qa_agent.ask
     if args.eval:
-        run_eval(llm, args.questions, args.name)
+        run_eval(llm, args.questions, args.name, ask)
         return
     if not args.question:
         ap.error("질문을 따옴표로 감싸 주거나 --eval을 쓰세요")
-    out = qa_agent.ask(args.question, llm)
+    out = ask(args.question, llm)
     show(out)
     sys.exit(0 if out["ok"] else 1)
 

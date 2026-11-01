@@ -93,9 +93,11 @@ class OpenAICompatible:
         return data["choices"][0]["message"]
 
 
-def text_tool_calls(content):
+def text_tool_calls(content, names=None):
     """모델이 도구 호출을 구조화하지 못하고 글 속 JSON으로 쓴 경우(작은 로컬 모델에서 가끔 생김),
-    그 JSON을 도구 호출로 읽는다. 예: '<tool_call> {"name": "get_backtest", "arguments": {}} </tool_call>'."""
+    그 JSON을 도구 호출로 읽는다. 예: '<tool_call> {"name": "get_backtest", "arguments": {}} </tool_call>'.
+    names: 도구 호출로 볼 이름 (기본은 데이터 도구 두 개, 3차는 final_answer도 넣는다)."""
+    names = set(names or qa_tools.FUNCS)
     calls, dec, i, text = [], json.JSONDecoder(), 0, content or ""
     while (i := text.find("{", i)) != -1:
         try:
@@ -103,7 +105,7 @@ def text_tool_calls(content):
         except json.JSONDecodeError:
             i += 1
             continue
-        if isinstance(obj, dict) and obj.get("name") in qa_tools.FUNCS:
+        if isinstance(obj, dict) and obj.get("name") in names:
             args = obj.get("arguments") or obj.get("parameters") or {}
             calls.append({"id": f"text_call_{len(calls)}", "type": "function",
                           "function": {"name": obj["name"], "arguments": json.dumps(args, ensure_ascii=False)}})
