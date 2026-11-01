@@ -56,6 +56,44 @@ def test_numcheck_rules():
     assert asked["ok"], asked
 
 
+def test_numcheck_period_and_language():
+    """2차에서 더한 검사: 도구 결과에 없는 기간에 도구 숫자를 붙인 문장, 한자가 섞인 답."""
+    log = [{"name": "get_forecast", "args": {}, "result": {"available_targets": "2026-01 ~ 2026-06", "rows": [
+        {"h": 6, "target": "2026-06", "forecast_t": 11826.3}]}}]
+    q = "2027년 중국 ABS 수출은?"
+    wrong = numcheck.check("2027년 중국 ABS 수출은 약 11,826톤으로 예측됩니다.", log, q)
+    assert not wrong["ok"] and wrong["unsupported"] == [] and wrong["issues"], wrong   # 숫자 하나하나는 근거가 있다
+    for fine in ["2027년 예측은 없습니다. 미래 예측은 2026-06까지이고, 2026-06 예측은 11,826.3톤입니다.",
+                 "2027년 예측은 없고 예측은 6개월치뿐입니다.", "2026년 6월 예측은 11,826.3톤입니다."]:
+        c = numcheck.check(fine, log, q)
+        assert c["ok"], (fine, c)
+    han = numcheck.check("2026-06 예측은 11,826.3톤입니다. 这比去年增长了.", log, q)
+    assert not han["ok"] and any("한자" in x for x in han["issues"])
+
+
+def test_h_argument_forms():
+    assert qa_tools._h(None) == [1, 2, 3, 4, 5, 6] and qa_tools._h([]) == [1, 2, 3, 4, 5, 6]
+    assert qa_tools._h(2) == [2] and qa_tools._h("2") == [2] and qa_tools._h([3, 1, 2]) == [1, 2, 3]
+    assert qa_tools._h("1~3") == [1, 2, 3] and qa_tools._h("1, 2") == [1, 2]
+    for bad in ([7], "0", "x"):
+        try:
+            qa_tools._h(bad)
+            raise AssertionError(f"잘못된 h가 통과함: {bad}")
+        except qa_tools.ToolError:
+            pass
+    f = qa_tools.get_forecast("ABS-CHN", h=[1, 2, 3])
+    assert [r["h"] for r in f["rows"]] == [1, 2, 3]
+    assert abs(f["rows_total_t"] - sum(r["forecast_t"] for r in f["rows"])) <= 0.15 and "합계" in f["summary_ko"]
+
+
+def test_agent_nudges_when_no_tool_called():
+    no_tool = {"role": "assistant", "content": "도구 결과에 없는 내용이라 모릅니다."}
+    llm = Scripted([no_tool, tool_call("get_backtest", {}), answer_from_backtest])
+    out = qa_agent.ask("LightGBM과 ETS의 WAPE는?", llm)
+    assert out["ok"] and out["tool_calls"][0]["name"] == "get_backtest", out
+    assert any(m["role"] == "user" and m["content"] == qa_agent.NUDGE for m in llm.seen[1])
+
+
 def test_agent_passes_with_tool_numbers():
     llm = Scripted([tool_call("get_backtest", {}), answer_from_backtest])
     out = qa_agent.ask("LightGBM과 ETS의 WAPE는?", llm)
@@ -83,7 +121,8 @@ def test_tools():
     llm = Scripted([tool_call("get_forecast", {"series": "china"}), tool_call("get_forecast", {"series": "ABS-CHN"}),
                     {"role": "assistant", "content": "확인했습니다."}])
     out = qa_agent.ask("중국 ABS 예측?", llm)
-    assert "error" in out["tool_calls"][0]["result"] and "rows" in out["tool_calls"][1]["result"]
+    assert "error" in out["tool_calls"][0]["result"] and "hint" in out["tool_calls"][0]["result"]
+    assert "rows" in out["tool_calls"][1]["result"]
     # 미래 예측은 합계가 맞아야 한다 (소수 1자리 반올림 오차만 허용)
     f = {s: qa_tools.get_forecast(s)["rows"] for s in names}
     for i in range(6):
