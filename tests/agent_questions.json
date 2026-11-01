@@ -1,0 +1,12 @@
+[
+  {"id": "overall", "question": "LightGBM은 기준선보다 얼마나 나았나요?", "expect_tools": ["get_backtest"]},
+  {"id": "h1", "question": "1개월 앞 예측만 보면 LightGBM이 ETS보다 나았나요?", "expect_tools": ["get_backtest"]},
+  {"id": "coverage", "question": "P10~P90 구간은 목표만큼 실제값을 담았나요?", "expect_tools": ["get_backtest"]},
+  {"id": "series_oth", "question": "ABS 기타 국가(ABS-OTH) 시리즈에서는 어떤 모델이 가장 좋았나요?", "expect_tools": ["get_backtest"]},
+  {"id": "mint", "question": "제품 합계와 전체 합계를 맞출 때 MinT 대신 BU를 쓴 이유는 무엇인가요?", "expect_tools": ["get_backtest"]},
+  {"id": "fc_abs_chn", "question": "중국으로 가는 ABS 수출의 2026년 1~3월 예측을 알려 주세요.", "expect_tools": ["get_forecast"]},
+  {"id": "fc_pc", "question": "PC 전체 수출은 앞으로 6개월 동안 어떻게 예측되나요?", "expect_tools": ["get_forecast"]},
+  {"id": "fc_total", "question": "ABS와 PC를 합친 전체 수출의 2026-01 예측은 얼마인가요?", "expect_tools": ["get_forecast"]},
+  {"id": "past_origin", "question": "2024-06 기준 시점에서 미국으로 가는 PC 수출을 1개월 앞으로 얼마로 예측했고, 실제는 얼마였나요?", "expect_tools": ["get_forecast"]},
+  {"id": "no_data", "question": "2027년 중국 ABS 수출은 얼마나 될까요?", "expect_tools": []}
+]
