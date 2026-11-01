@@ -122,6 +122,7 @@ OpenAI 호환 API(`/chat/completions`의 도구 호출)로 결과를 묻고 답�
   - `get_backtest(series, h)`: 모델별 WAPE·편향·MASE, 부트스트랩 P, 구간 적중률, 계층 조정 결과.
 - 숫자 검사([`tsa/numcheck.py`](tsa/numcheck.py))는 답변의 숫자가 모두 도구 결과나 질문에 있는지 확인합니다. 허용하는 것은 반올림, 부호 생략, 확률을 %로 쓴 것, 'YYYY년 M월' 표기뿐입니다. 근거 없는 숫자가 있으면 그 숫자를 알려 주고 한 번 다시 쓰게 하고, 그래도 남으면 경고와 함께 실패로 표시합니다. 한계도 있습니다. 같은 값이 도구 결과 어딘가에 있으면 통과하므로, 어느 항목과 맞았는지를 함께 출력합니다.
 - 설정: [`.env.example`](.env.example)을 `.env`로 복사해 `OPENAI_BASE_URL`, `OPENAI_API_KEY`, `OPENAI_MODEL`을 채웁니다 (`.env`는 커밋되지 않습니다).
+- Ollama로 돌릴 때: NVIDIA GPU가 있으면 Ollama가 알아서 GPU를 씁니다. Ollama는 문맥 길이가 짧으면 긴 요청의 앞부분을 잘라 버리므로, Ollama를 켜기 전에 환경 변수 `OLLAMA_CONTEXT_LENGTH=8192`를 설정합니다. 잘렸는지 확인할 수 있게 평가 결과에 가장 긴 요청의 입력 토큰 수를 기록합니다.
 - 실행: `python ask.py "중국으로 가는 ABS 수출의 2026년 1~3월 예측은?"`. 미리 정한 질문 10개로 평가하려면 `python ask.py --eval`을 씁니다 (결과는 RESULTS.md 11절).
 - LLM 없이 도는 테스트: [`tests/test_agent.py`](tests/test_agent.py). 대본대로 답하는 가짜 모델로 재시도 흐름을 보고, 로컬 가짜 서버로 HTTP 경로를 확인합니다.
 - 실제 LLM으로 돌린 평가는 아직 없습니다 (LLM 연결이 필요합니다).

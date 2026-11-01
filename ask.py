@@ -29,14 +29,17 @@ def run_eval(llm):
     qs = json.loads((config.ROOT / "tests" / "agent_questions.json").read_text(encoding="utf-8"))
     rows, full = [], []
     for i, q in enumerate(qs, 1):
+        n0 = len(llm.prompt_tokens)
         out = qa_agent.ask(q["question"], llm)
         first = out["attempts"][0]["check"]
         called = sorted({t["name"] for t in out["tool_calls"]})
+        used = [t for t in llm.prompt_tokens[n0:] if t]
         rows.append({"id": q["id"], "question": q["question"], "expect_tools": q["expect_tools"],
                      "called_tools": called, "tool_choice_ok": set(q["expect_tools"]) <= set(called),
                      "first_try_ok": first["ok"], "final_ok": out["ok"], "attempts": len(out["attempts"]),
                      "n_numbers_first": first["n_numbers"], "n_numbers_final": out["check"]["n_numbers"],
-                     "unsupported_first": first["unsupported"], "unsupported_final": out["check"]["unsupported"]})
+                     "unsupported_first": first["unsupported"], "unsupported_final": out["check"]["unsupported"],
+                     "max_prompt_tokens": max(used, default=None)})
         full.append(out)
         print(f"[{i}/{len(qs)}] {q['id']}: 첫 답변 {'통과' if first['ok'] else '실패'}, "
               f"최종 {'통과' if out['ok'] else '실패'}, 도구 {called}")
@@ -47,7 +50,9 @@ def run_eval(llm):
          "numbers_first_try": sum(r["n_numbers_first"] for r in rows),
          "numbers_final": sum(r["n_numbers_final"] for r in rows),
          "unsupported_first_try": sum(len(r["unsupported_first"]) for r in rows),
-         "unsupported_final": sum(len(r["unsupported_final"]) for r in rows), "questions": rows}
+         "unsupported_final": sum(len(r["unsupported_final"]) for r in rows),
+         "max_prompt_tokens": max((r["max_prompt_tokens"] for r in rows if r["max_prompt_tokens"]), default=None),
+         "questions": rows}
     (config.OUT_DIR / "agent_eval.json").write_text(json.dumps(A, ensure_ascii=False, indent=2), encoding="utf-8")
     # 답변 전문에는 실제 물량이 들어갈 수 있어 커밋하지 않는 cache/에 둔다
     config.CACHE_DIR.mkdir(parents=True, exist_ok=True)

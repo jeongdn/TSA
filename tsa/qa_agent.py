@@ -29,13 +29,18 @@ SYSTEM = (
 
 
 def load_env(path=config.ROOT / ".env"):
-    """.env의 KEY=VALUE 줄을 환경 변수로 읽는다 (이미 설정된 환경 변수가 우선)."""
-    if path.exists():
-        for line in path.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                k, v = line.split("=", 1)
-                os.environ.setdefault(k.strip(), v.strip().strip("\"'"))
+    """.env의 KEY=VALUE 줄을 환경 변수로 읽는다. 같은 이름이 여러 번 있으면 아래 줄의 값을 쓴다.
+    이미 설정된 환경 변수(터미널에서 직접 지정한 값)가 .env보다 우선한다. 메모장이 붙이는 BOM은 무시한다."""
+    if not path.exists():
+        return
+    values = {}
+    for line in path.read_text(encoding="utf-8-sig").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            k, v = line.split("=", 1)
+            values[k.strip()] = v.strip().strip("\"'")
+    for k, v in values.items():
+        os.environ.setdefault(k, v)
 
 
 def _mask(text):
@@ -52,6 +57,7 @@ class OpenAICompatible:
         self.api_key = api_key if api_key is not None else os.environ.get("OPENAI_API_KEY", "")
         self.model = model or os.environ.get("OPENAI_MODEL")
         self.timeout = float(timeout or os.environ.get("OPENAI_TIMEOUT", 300))
+        self.prompt_tokens = []          # 요청마다 서버가 센 입력 토큰 수 (문맥 길이를 넘어 잘렸는지 볼 때 쓴다)
         if not self.model:
             raise SystemExit("OPENAI_MODEL이 없습니다. .env.example을 .env로 복사해 채우세요 (README '질의응답 에이전트').")
 
@@ -62,11 +68,15 @@ class OpenAICompatible:
                                               "Authorization": f"Bearer {self.api_key}"})
         try:
             with urllib.request.urlopen(req, timeout=self.timeout) as r:
-                return json.loads(r.read().decode("utf-8"))["choices"][0]["message"]
+                data = json.loads(r.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             raise RuntimeError(f"API 오류 {e.code}: {_mask(e.read().decode('utf-8', 'replace'))[:400]}") from None
         except urllib.error.URLError as e:
             raise RuntimeError(f"{self.base_url}에 연결하지 못했습니다: {e.reason}") from None
+        except TimeoutError:
+            raise RuntimeError(f"{self.timeout:.0f}초 안에 응답이 없습니다 (OPENAI_TIMEOUT으로 늘릴 수 있음)") from None
+        self.prompt_tokens.append((data.get("usage") or {}).get("prompt_tokens"))
+        return data["choices"][0]["message"]
 
 
 def run_tools(msg, log):

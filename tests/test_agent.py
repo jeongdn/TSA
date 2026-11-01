@@ -5,9 +5,13 @@
 2. 대본대로 답하는 가짜 모델: 도구 결과의 숫자로 답하면 한 번에 통과, 지어낸 숫자를 쓰면 다시 쓰게 해서 통과.
 3. 도구: 잘못된 시리즈 이름은 고칠 수 있는 오류로 돌려주고, 미래 예측은 합계가 맞는다(전체 = ABS + PC = 하위 합).
 4. OpenAI 호환 HTTP 경로: 로컬 가짜 서버가 /chat/completions 형식으로 도구 호출 -> 답변을 돌려준다.
+5. .env 읽기: 같은 이름이 두 번 있으면 아래 줄, 이미 있는 환경 변수가 우선, BOM·따옴표·주석 처리.
 """
 import http.server
 import json
+import os
+import pathlib
+import tempfile
 import threading
 
 from tsa import numcheck, qa_agent, qa_tools
@@ -123,6 +127,25 @@ def test_http_client_with_local_fake_server():
     path, auth, body = seen[0]
     assert path == "/v1/chat/completions" and auth == "Bearer local-test" and body["model"] == "fake-model"
     assert {t["function"]["name"] for t in body["tools"]} == {"get_forecast", "get_backtest"}
+    assert llm.prompt_tokens == [None, None]          # 가짜 서버는 usage를 주지 않는다
+
+
+def test_load_env():
+    keys = ["TSA_T_A", "TSA_T_B", "TSA_T_C", "TSA_T_D"]
+    for k in keys:
+        os.environ.pop(k, None)
+    os.environ["TSA_T_D"] = "from-shell"
+    try:
+        with tempfile.TemporaryDirectory() as d:
+            p = pathlib.Path(d) / ".env"
+            p.write_text("﻿TSA_T_A=first\nTSA_T_A=second\n# TSA_T_B=commented\nTSA_T_C=\"quoted\"\n"
+                         "TSA_T_D=from-file\n", encoding="utf-8")
+            qa_agent.load_env(p)
+        assert os.environ["TSA_T_A"] == "second" and "TSA_T_B" not in os.environ
+        assert os.environ["TSA_T_C"] == "quoted" and os.environ["TSA_T_D"] == "from-shell"
+    finally:
+        for k in keys:
+            os.environ.pop(k, None)
 
 
 if __name__ == "__main__":

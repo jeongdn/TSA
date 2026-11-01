@@ -437,7 +437,9 @@ def agent_md(A):
          f"{A['final_ok']}/{n}",
          f"- 기대한 도구를 부른 질문: {A['tool_choice_ok']}/{n}",
          f"- 답변 속 숫자 중 근거 없는 숫자: 첫 답변 {A['unsupported_first_try']}개 / {A['numbers_first_try']}개, "
-         f"최종 {A['unsupported_final']}개 / {A['numbers_final']}개\n",
+         f"최종 {A['unsupported_final']}개 / {A['numbers_final']}개"
+         + (f"\n- 가장 긴 요청의 입력 토큰 수: {A['max_prompt_tokens']:,} (로컬 서버의 문맥 길이보다 작아야 앞부분이 "
+            "잘리지 않는다)" if A.get("max_prompt_tokens") else "") + "\n",
          "| 질문 | 부른 도구 | 첫 답변 | 최종 | 근거 없던 숫자 (첫 답변) |", "|---|---|---|---|---|"]
     for q in A["questions"]:
         tools = ", ".join(q["called_tools"]) or "-"
