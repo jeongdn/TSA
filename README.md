@@ -258,3 +258,7 @@ data/manifest.json      원자료 파일별 체크섬
 - 이용 조건: [License Agreement](https://comtrade.un.org/licenseagreement.html), [Policy on Comtrade Data Use](https://uncomtrade.org/docs/policy-on-comtrade-data-use/), [Re-dissemination of data](https://uncomtrade.org/docs/re-dissemination-of-data/), [Read Me First (Disclaimer)](https://uncomtrade.org/docs/read-me-first-disclaimer/)
 - 원/달러 환율 `EXKOUS`: Board of Governors of the Federal Reserve System (G.5, 일별 값의 월평균), FRED 경유 (2026-11-01 받음).
 - 브렌트유 `MCOILBRENTEU`: U.S. Energy Information Administration, FRED 경유 (2026-11-01 받음).
+
+## 라이선스
+
+이 저장소의 코드는 [MIT 라이선스](LICENSE)를 따릅니다. UN Comtrade·FRED에서 받은 자료와 그것으로 계산한 값은 MIT 라이선스 대상이 아니고, 각 출처의 이용 조건을 따릅니다 (위 [이용 조건](#이용-조건-un-comtrade)과 [출처](#출처)). 이런 값은 주로 `outputs/`의 결과 파일과 그림, `frozen.json`·`frozen_mint.json`, 문서에 들어 있습니다.
