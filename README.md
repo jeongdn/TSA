@@ -3,6 +3,8 @@
 한국의 ABS·PC 월별 수출 물량을 상대국별로 1~6개월 앞까지 예측하고, 그 결과를 **미리 정해 둔 절차로 정직하게 평가**한 연습 프로젝트입니다.
 LOTTE AX Challenge 2026의 '롯데케미칼 첨단소재(ABS·PC·컴파운드) 수요예측 AI' 과제에 지원하면서, 지원서에 쓴 설계(기준선 → 글로벌 LightGBM → 롤링 백테스트 → 부트스트랩 → 확률 예측)를 공개 데이터로 직접 확인해 보려고 만들었습니다. 이어서 제품 합계·전체 합계를 맞추는 계층 조정과, 결과 숫자만 인용하는 작은 질의응답 에이전트를 붙였습니다 ([7번](#7번-합계-맞추기와-질의응답-에이전트)). 문서의 1번부터 6번까지는 처음 계획대로 먼저 한 작업 단계이고, 7번은 계획에 있던 것을 요청을 받아 그 뒤에 한 단계입니다.
 
+코드와 문서는 Claude Code(AI 코딩 도구)와 함께 만들었습니다. 작업 기록([WORKLOG.md](WORKLOG.md))의 '나'는 Claude Code 세션입니다.
+
 > **실제 판매 데이터가 아닙니다.** 한국 전체 수출 통계(UN Comtrade)이고, 롯데케미칼의 등급 x 고객 데이터와는 다릅니다. 이 저장소의 정확도 숫자는 그대로 옮겨 갈 수 없고, 옮겨 갈 수 있는 것은 **평가 방법**입니다. 한계는 [아래](#데이터의-한계)에 정리했습니다.
 
 ## 문제
@@ -253,6 +255,6 @@ data/manifest.json      원자료 파일별 체크섬
 ## 출처
 
 - UN Comtrade Database, United Nations Statistics Division. https://comtradeplus.un.org (2026-11-01 받음)
-- 이용 조건: [License Agreement](https://comtrade.un.org/licenseagreement.html), [Policy on Comtrade Data Use](https://uncomtrade.org/docs/policy-on-use-and-re-dissemination/), [Re-dissemination of data](https://uncomtrade.org/docs/re-dissemination-of-data/), [Read Me First (Disclaimer)](https://uncomtrade.org/docs/read-me-first-disclaimer/)
+- 이용 조건: [License Agreement](https://comtrade.un.org/licenseagreement.html), [Policy on Comtrade Data Use](https://uncomtrade.org/docs/policy-on-comtrade-data-use/), [Re-dissemination of data](https://uncomtrade.org/docs/re-dissemination-of-data/), [Read Me First (Disclaimer)](https://uncomtrade.org/docs/read-me-first-disclaimer/)
 - 원/달러 환율 `EXKOUS`: Board of Governors of the Federal Reserve System (G.5, 일별 값의 월평균), FRED 경유 (2026-11-01 받음).
 - 브렌트유 `MCOILBRENTEU`: U.S. Energy Information Administration, FRED 경유 (2026-11-01 받음).
