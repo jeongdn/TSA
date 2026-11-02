@@ -1,7 +1,7 @@
 # ABS·PC 수출 수요예측 연습 (공개 데이터)
 
 한국의 ABS·PC 월별 수출 물량을 상대국별로 1~6개월 앞까지 예측하고, 그 결과를 **미리 정해 둔 절차로 정직하게 평가**한 연습 프로젝트입니다.
-LOTTE AX Challenge 2026의 '롯데케미칼 첨단소재(ABS·PC·컴파운드) 수요예측 AI' 과제에 지원하면서, 지원서에 쓴 설계(기준선 → 글로벌 LightGBM → 롤링 백테스트 → 부트스트랩 → 확률 예측)를 공개 데이터로 직접 확인해 보려고 만들었습니다. 이어서 제품 합계·전체 합계를 맞추는 계층 조정과, 결과 숫자만 인용하는 작은 질의응답 에이전트를 붙였습니다 ([7번](#7번-합계-맞추기와-질의응답-에이전트)).
+LOTTE AX Challenge 2026의 '롯데케미칼 첨단소재(ABS·PC·컴파운드) 수요예측 AI' 과제에 지원하면서, 지원서에 쓴 설계(기준선 → 글로벌 LightGBM → 롤링 백테스트 → 부트스트랩 → 확률 예측)를 공개 데이터로 직접 확인해 보려고 만들었습니다. 이어서 제품 합계·전체 합계를 맞추는 계층 조정과, 결과 숫자만 인용하는 작은 질의응답 에이전트를 붙였습니다 ([7번](#7번-합계-맞추기와-질의응답-에이전트)). 문서의 1번부터 6번까지는 처음 계획대로 먼저 한 작업 단계이고, 7번은 계획에 있던 것을 요청을 받아 그 뒤에 한 단계입니다.
 
 > **실제 판매 데이터가 아닙니다.** 한국 전체 수출 통계(UN Comtrade)이고, 롯데케미칼의 등급 x 고객 데이터와는 다릅니다. 이 저장소의 정확도 숫자는 그대로 옮겨 갈 수 없고, 옮겨 갈 수 있는 것은 **평가 방법**입니다. 한계는 [아래](#데이터의-한계)에 정리했습니다.
 
@@ -22,7 +22,7 @@ LOTTE AX Challenge 2026의 '롯데케미칼 첨단소재(ABS·PC·컴파운드) 
 - 2026년 자료가 없는 이유: 한국 월별 자료는 Comtrade에 1년치씩 몰아서 올라옵니다 (2025년치는 2026-05-20 공개). 관세청 공공데이터포털 API는 더 최신이지만 키가 필요해서 이번에는 쓰지 않았습니다.
 - 확인한 품질: 매달 World 행이 상대국 합계와 정확히 같고, 물량 단위는 kg, 추정값 표시가 없습니다. 거래가 없는 달은 행이 빠져 있어 0으로 채웠습니다. PC 2017-09·2025-08에는 작은 상대국 행 하나씩(스위스 0.5 kg, 핀란드 800 kg)의 순중량이 비어 있어 그달 World 행까지 비어 있었습니다. 같은 행의 kg 단위 대체 수량(`altQty`)으로 채웠습니다 (4행).
 - 상위 8개국은 첫 검증 기준 시점(2022-02)까지의 24개월 물량으로 골랐습니다. 목록과 비중은 [`outputs/series_info.csv`](outputs/series_info.csv)에 있습니다.
-- 원자료는 저장소에 넣지 않았습니다. `run_all.py`가 처음 실행될 때 받아 `data/raw/`에 저장합니다. 동결 때의 원자료는 값만으로 만든 지문 [`data/content_hash.json`](data/content_hash.json)으로 확인합니다. 파일별 SHA-256([`data/manifest.json`](data/manifest.json))은 응답에 서버 처리 시간이 들어 있어 원래 캐시 파일과만 일치합니다.
+- 원자료 파일은 저장소에 넣지 않았습니다. `run_all.py`가 처음 실행될 때 받아 `data/raw/`에 저장합니다. 동결 때의 원자료는 값만으로 만든 지문 [`data/content_hash.json`](data/content_hash.json)으로 확인합니다. 파일별 SHA-256([`data/manifest.json`](data/manifest.json))은 응답에 서버 처리 시간이 들어 있어 원래 캐시 파일과만 일치합니다.
 
 ### 데이터의 한계
 
@@ -39,13 +39,17 @@ LOTTE AX Challenge 2026의 '롯데케미칼 첨단소재(ABS·PC·컴파운드) 
 
 ### 이용 조건 (UN Comtrade)
 
-2026-11-02에 UN Comtrade의 이용 약관(License Agreement, 2012)과 'Policy on Comtrade Data Use', 재배포 FAQ를 읽고 정리한 것입니다. 법률 자문이 아니라 공개된 문서를 읽은 내용입니다.
+2026-11-02에 UN Comtrade의 이용 약관(License Agreement, 2012)과 'Policy on Comtrade Data Use', 재배포 FAQ, 'Read Me First (Disclaimer)'를 읽고 정리한 것입니다. 법률 자문이 아니라 공개된 문서를 읽은 내용입니다.
 
 - 무료 공개 API로 받은 자료도 약관과 정책을 따릅니다.
-- 이 저장소에는 원자료가 없습니다. `run_all.py`가 API에서 직접 받습니다. 정책은 자동화된 수집을 API로 하라고 안내합니다.
+- 이 저장소에는 원자료 파일이 없습니다. `run_all.py`가 API에서 직접 받습니다. 정책은 자동화된 수집을 API로 하라고 안내합니다.
 - 공개하는 것은 가공한 결과(오차 지표, 예측, 요약 표)입니다. 정책은 이런 가공 자료(transformed data)를 배포 허가나 비용 없이 다시 배포할 수 있다고 설명합니다.
 - 실제 월별 물량이 들어간 그림은 [`fig_fan.png`](outputs/figures/fig_fan.png) 하나입니다 (중국향 ABS·PC, 약 120개 값). 정책의 예외 조항("적은 양을 표·그래프로 공개하는 것은 허가가 필요 없다")에 해당한다고 봅니다.
-- 출처는 "UN Comtrade"로 표기하고, UN Comtrade의 'Read Me First (Disclaimer)'를 따릅니다.
+- 그 밖에 실제값에서 나온 것도 있습니다 (WORKLOG 17절에 같은 목록).
+  - 위 '확인한 품질'의 원자료 값 2개 (스위스 0.5 kg, 핀란드 800 kg).
+  - 실제 물량으로 계산한 시리즈별 물량 비중: 선정 기간 비중 18개(`outputs/series_info.csv`), 테스트 기간 비중 18개(`outputs/results.json`, RESULTS.md 1·8절에도 실음). `outputs/intermittency.csv`의 CV2 18개도 실제 물량만으로 계산했습니다.
+  - 에이전트 평가 기록의 '작년 같은 달 대비' 증감률 3개와 실제값 대비 오차율 2개. 이 중 TOTAL 증감률 2개(2.3%, 3.8%)는 같은 달 TOTAL 예측과 함께 보면 2025-01·06의 TOTAL 실제 물량을 대략 거꾸로 계산할 수 있습니다. 나머지는 같은 달 예측을 싣지 않아 계산할 수 없습니다.
+- 출처는 "UN Comtrade"로 표기하고(맨 아래 '출처'), UN Comtrade의 [Read Me First (Disclaimer)](https://uncomtrade.org/docs/read-me-first-disclaimer/)를 인정하고 따릅니다. 정책은 이 면책 문구를 인정하는 조건으로 자료를 쓰게 합니다.
 - 약관 원문 §5는 사전 서면 허가 없는 자동 다운로드·재배포·공개를 넓게 금지하고, 예외는 정책과 FAQ 쪽에만 있습니다. 확실히 하려면 comtrade@un.org에 확인할 수 있습니다.
 
 ## 방법
@@ -129,8 +133,8 @@ LOTTE AX Challenge 2026의 '롯데케미칼 첨단소재(ABS·PC·컴파운드) 
 OpenAI 호환 API(`/chat/completions`의 도구 호출)로 결과를 묻고 답하는 작은 에이전트입니다 ([`ask.py`](ask.py), [`tsa/qa_agent.py`](tsa/qa_agent.py)). HTTP 요청은 표준 라이브러리로 보내서, 주소만 바꾸면 OpenAI든 로컬 Ollama든 같은 코드로 돕니다.
 
 - 도구는 두 개이고, 둘 다 저장된 결과 파일만 읽습니다 ([`tsa/qa_tools.py`](tsa/qa_tools.py)).
-  - `get_forecast(series, origin, h)`: 2026-01 ~ 06 예측(하위 시리즈는 P10·P90 포함), 또는 테스트 기준 시점 하나의 예측과 실제값.
-  - `get_backtest(series, h)`: 모델별 WAPE·편향·MASE, 부트스트랩 재표집 비율, 구간 적중률, 계층 조정 결과.
+  - `get_forecast(series, origin, h)`: 2026-01 ~ 06 예측(하위 시리즈는 P10·P90 포함)과 작년 같은 달의 실제값, 또는 테스트 기준 시점 하나의 예측과 실제값.
+  - `get_backtest(series, h)`: 모델별 WAPE·편향·MASE, 부트스트랩 재표집 비율, 구간 적중률, 계층 조정 결과. 하위 시리즈를 주면 그 시리즈의 테스트 물량 비중도 줍니다.
 - 숫자 검사([`tsa/numcheck.py`](tsa/numcheck.py))는 답변의 숫자가 모두 도구 결과나 질문에 있는지 확인합니다.
   - 허용하는 것: 반올림, 0~1 값을 %로 쓴 것(예: 재표집 비율 0.542 -> 54.2%), 'YYYY년 M월' 표기. P10, ABS-CHN처럼 영문자에 붙은 숫자는 이름으로 보고 검사하지 않습니다.
   - 한계: 부호는 비교하지 않습니다. 그래서 증감 방향이나 과대·과소가 반대인 숫자도 통과합니다. 같은 값이 도구 결과 어딘가에 있어도 통과합니다. 그래서 어느 항목과 맞았는지를 함께 출력합니다.
@@ -139,6 +143,7 @@ OpenAI 호환 API(`/chat/completions`의 도구 호출)로 결과를 묻고 답�
 - 3차는 다시 쓰게 하지 않습니다. 걸린 문장을 빼거나, 보호 장치 문장('답할 수 없음'과 범위 안내)으로 바꿉니다. 보호 장치 문장은 코드가 만든 것이라 숫자 검사를 건너뜁니다 (아래 5).
 - 설정: [`.env.example`](.env.example)을 `.env`로 복사해 `OPENAI_BASE_URL`, `OPENAI_API_KEY`, `OPENAI_MODEL`을 채웁니다 (`.env`는 커밋되지 않습니다).
 - Ollama로 돌릴 때: NVIDIA GPU가 있으면 Ollama가 알아서 GPU를 씁니다. Ollama는 문맥 길이가 짧으면 긴 요청의 앞부분을 잘라 버리므로, Ollama를 켜기 전에 환경 변수 `OLLAMA_CONTEXT_LENGTH=8192`를 설정합니다. 잘렸는지 확인할 수 있게 평가 결과에 질문마다 가장 긴 요청의 입력 토큰 수를 기록합니다.
+- 도구가 읽는 예측 파일(`outputs/*.csv.gz`)은 커밋하지 않았습니다. 새로 받은 저장소에서는 먼저 아래 '재현'의 한 줄로 만듭니다 (아래 테스트도 같습니다).
 - 실행: `python ask.py "중국으로 가는 ABS 수출의 2026년 1~3월 예측은?"`. 평가는 `python ask.py --eval --questions <질문 파일> --name <새 이름>`입니다. 결과는 `outputs/agent_eval_<이름>.json`에 쓰입니다. `--name`을 빼면 커밋된 1차 기록(`agent_eval.json`)을 덮어쓰니 다시 돌릴 때는 새 이름을 씁니다. 3차 에이전트는 `--agent v3`를 붙입니다. 기본값(`--agent v2`)은 2차 에이전트 코드지만, 3차에서 도구 결과에 필드를 더해서 2차 동결본과 똑같지는 않습니다. 2차·처음 결과를 같은 조건으로 다시 돌리려면 `freeze-agent`·`b4bcee2`를 git worktree로 꺼내 돌립니다 (WORKLOG 16절).
 - 뜻 검토는 Claude Code의 Workflow로 돌린 독립 검토 에이전트가 했습니다. 지시문과 집계 스크립트는 [`tools/agent_eval/`](tools/agent_eval/)에 있습니다 (Claude Code 밖에서는 그대로 돌릴 수 없습니다).
 - LLM 없이 도는 테스트: [`tests/test_agent.py`](tests/test_agent.py) (2차), [`tests/test_agent3.py`](tests/test_agent3.py) (3차). 대본대로 답하는 가짜 모델로 재시도·id 고르기·보호 장치 흐름을 보고, 로컬 가짜 서버로 HTTP 경로를 확인합니다.
@@ -149,7 +154,7 @@ OpenAI 호환 API(`/chat/completions`의 도구 호출)로 결과를 묻고 답�
      - 도구를 반드시 부르게 하고(안 부른 답은 돌려보냄), 글로 쓴 도구 호출도 읽습니다. 이때 처음 지시문에 있던 '도구 결과에 없는 내용은 모른다고 말한다'를 뺐습니다.
      - 기간 불일치·범위 밖·한자 검사를 더하고, 끝까지 걸린 문장은 뺍니다.
      - 고칠 때 쓴 개발용 질문에서도 뜻 검토는 3/10에서 4/10으로 하나 늘었을 뿐입니다 (개발 4, 이 검토는 동결 뒤에 했습니다).
-  3. **테스트:** 독립 에이전트가 따로 쓴 새 질문 10개를 동결본으로 한 번 돌렸습니다. 고친 사람은 실행 전까지 질문을 보지 않았습니다. 동결본 결과를 본 뒤, 비교하려고 처음 에이전트도 같은 질문으로 돌리기로 했습니다.
+  3. **테스트:** 독립 에이전트가 따로 쓴 새 질문 10개를 동결본으로 한 번 돌렸습니다. 고친 세션(Claude)은 실행 전까지 질문을 보지 않았습니다 (기록일 뿐 확인할 장치는 없습니다). 동결본 결과를 본 뒤, 비교하려고 처음 에이전트도 같은 질문으로 돌리기로 했습니다.
 
      | 같은 테스트 질문 10개 | 뜻까지 맞음 (두 검토자 모두) | 질문에 답함 | 알맞은 도구·인자 | 모델 답 숫자 검사 (첫 답 / 최종) | 보여 준 답 숫자 검사 |
      |---|---|---|---|---|---|
@@ -169,16 +174,16 @@ OpenAI 호환 API(`/chat/completions`의 도구 호출)로 결과를 묻고 답�
      - PP 답(t10)에서는 안전장치가 맞는 문장(작년 같은 달 대비)을 기간 검사 오탐으로 지웠고, 틀린 문장만 남겨 보여 줬습니다. 같은 질문에 처음 에이전트는 도구를 부르지 않고 '정보가 없다'고 했습니다 (결론은 맞지만 확인하지 않은 답이라 뜻 검토는 실패, 가린 재검토에서는 통과). '모른다' 규칙을 뺀 것, 도구를 반드시 부르게 한 것, origin을 너그럽게 읽은 것이 원인으로 보이지만 확인하지는 않았습니다.
      - 검사를 하나 더할 때마다 다른 오류가 나와서, 구조를 바꿔 보기로 했습니다 (아래 5).
   5. **3차 (구조 바꾸기):** 모델은 어느 사실 문장을 쓸지 id만 고르고, 문장과 비교는 코드가 만듭니다 ([`tsa/qa_facts.py`](tsa/qa_facts.py), [`tsa/qa_agent3.py`](tsa/qa_agent3.py)).
-     - 답은 코드가 도구 결과로 만든 문장을 그대로 이은 것입니다. 예측값 문장에는 대상 이름·달·값·단위가 들어가고, '가장 낮은 모델', '가장 적은 달' 같은 비교도 코드가 계산합니다. 다만 성능 요약 문장 중에는 시리즈 이름이 없는 것(전체 WAPE, 합계 맞추기 결정 등)도 있습니다.
+     - 답은 코드가 도구 결과로 만든 문장을 그대로 이은 것입니다. 예측값 문장에는 대상 이름·달·값·단위가 들어가고, '가장 낮은 모델', '가장 적은 달' 같은 비교도 코드가 계산합니다. 다만 성능 요약 문장 중에는 시리즈 이름이 없는 것(전체 WAPE, 합계 맞추기 결정 등)도 있습니다. 작년 같은 달 대비 문장과 과거 기준 시점 문장에는 실제 물량(톤)도 들어갑니다.
      - 보호 장치: 코드가 '답할 수 없음'과 범위 안내로 바꿉니다.
        - 기간: 질문한 기간이 모델이 부른 도구 결과에 없을 때입니다. 범위 밖 기간(2027년 등)을 노렸지만, 모델이 기준 시점을 잘못 넣어 다른 기간을 불러도 걸립니다.
        - 제품: 질문에 목록에 있는 다른 제품 이름(PP, PE, PVC, 나일론 등)이 있고 ABS·PC 이야기가 없을 때만입니다. 목록에 없는 제품, ABS·PC와 함께 묻는 다른 제품, 없는 나라는 막지 못합니다.
      - 이미 본 질문 20개(개발용 + 1차 테스트)로 네 번 돌려 보며 세 번 고친 뒤 동결했습니다 (태그 `freeze-agent-v3`). 고칠 때 본 질문이라 뜻 검토는 하지 않았습니다.
      - 그 질문으로 기록상 숫자 검사·기대한 도구가 20/20이었습니다. 하지만 숫자 검사는 보호 장치가 바꾼 답을 통과로 센 값이고, 모델이 고른 답으로 보면 18/20입니다. '기대한 도구'는 도구 이름만 봅니다.
      - 동결 때 본 질문에 남은 것으로 아는 오류는 두 개입니다.
-       - 보호 장치가 범위 안의 질문(1차 테스트 t06, 2026년 상반기 ABS)을 잘못 거절했습니다. 저는 이것을 맞는 동작으로 보고 넘어갔습니다 (잘못 판단).
+       - 보호 장치가 범위 안의 질문(1차 테스트 t06, 2026년 상반기 ABS)을 잘못 거절했습니다. 고친 세션(Claude)은 이것을 맞는 동작으로 보고 넘어갔습니다 (잘못 판단).
        - 'PC 전체' 질문(개발용)에 TOTAL(ABS+PC)을 불렀습니다.
-  6. **테스트2:** 독립 에이전트가 3차 동결 전에 따로 쓴 새 질문 10개로 세 버전을 한 번씩 돌렸습니다. 고친 사람은 실행 전까지 질문을 열지 않았습니다 (기록일 뿐 확인할 장치는 없습니다). 질문 칸(제품 합계, 자료에 없는 대상 등)은 1차 테스트를 따라 정해서 대부분 같습니다. 3차는 1차 테스트를 보며 고쳤으니 3차에 유리한 조건입니다. 다만 두 칸은 종류가 달랐습니다. 없는 제품(PP) 대신 없는 나라(독일)를 물었고, 모델 비교 대신 합계 맞추기를 물었습니다.
+  6. **테스트2:** 독립 에이전트가 3차 동결 전에 따로 쓴 새 질문 10개로 세 버전을 한 번씩 돌렸습니다. 고친 세션은 실행 전까지 질문을 열지 않았습니다 (기록일 뿐 확인할 장치는 없습니다). 질문 칸(제품 합계, 자료에 없는 대상 등)은 1차 테스트를 따라 정해서 대부분 같습니다. 3차는 1차 테스트를 보며 고쳤으니 3차에 유리한 조건입니다. 다만 두 칸은 종류가 달랐습니다. 없는 제품(PP) 대신 없는 나라(독일)를 물었고, 모델 비교 대신 합계 맞추기를 물었습니다.
 
      | 같은 테스트2 질문 10개 | 뜻까지 맞음 (두 검토자 모두) | 질문에 답함 | 알맞은 도구·인자 | 주장이 모두 맞음 (결과를 본 뒤 고른 지표) | 보여 준 답 숫자 검사 |
      |---|---|---|---|---|---|
@@ -224,10 +229,10 @@ python -m venv .venv && .venv/Scripts/python -m pip install --only-binary=:all: 
 - 처음 실행하면 Comtrade 132개월을 받습니다 (약 15~25분, 호출 사이 2초 대기). 이후에는 `data/raw/` 캐시를 씁니다. 모델 계산은 검증 단계 약 5분, 테스트 단계 약 10분입니다.
 - `frozen.json`이 있으면 검증 단계를 다시 돌려 같은 선택(LightGBM 설정, 외부 지표 사용 여부, 앙상블 가중치, 구간 보정폭)이 나오는지 확인합니다. 다르면 멈춥니다. 같으면 동결본으로 테스트를 채점하고 `outputs/results.json`, 그림, `RESULTS.md`, README·SUMMARY의 자동 표를 다시 만듭니다 (커밋된 파일을 덮어씀).
 - 원자료 값이 동결 때와 다르면(Comtrade 수정 등) 경고가 나오고 `RESULTS.md`에도 표시됩니다.
-- 단계별 실행: `--stage val`, `--stage final`, `--stage mint`, `--stage forecast`, `--stage report`. `final`은 같은 PC에서 먼저 돌린 `val`의 `outputs/val_*` 파일이 필요하고, `mint`는 `val`·`final`의 예측 파일이, `report`의 그림과 기준 시점별 승패 문단은 `final`이 만든 예측 파일이 필요합니다 (이 파일들은 커밋하지 않음). 원자료를 다시 받으려면 `--refresh`.
+- 단계별 실행: `--stage val`, `--stage final`, `--stage mint`, `--stage forecast`, `--stage report`. `final`은 같은 컴퓨터에서 먼저 돌린 `val`의 `outputs/val_*` 파일이 필요하고, `mint`는 `val`·`final`의 예측 파일이, `report`의 그림과 기준 시점별 승패 문단은 `final`이 만든 예측 파일이 필요합니다 (이 파일들은 커밋하지 않음). 원자료를 다시 받으려면 `--refresh`.
 - `mint`는 `frozen_mint.json`이 있으면 검증 구간에서 방법을 다시 정해 같은지 확인한 뒤 테스트를 채점하고, 다르면 멈춥니다. `forecast`는 마지막 자료 월 기준 예측을 `outputs/forecast_latest.csv.gz`에 씁니다.
 - 테스트: `.venv/Scripts/python -m tests.test_no_leakage` (누수), `-m tests.test_hierarchy` (계층 조정), `-m tests.test_agent`, `-m tests.test_agent3` (에이전트 2차·3차, LLM 없이)
-- 에이전트: `.venv/Scripts/python ask.py "질문"` (`.env` 설정 필요, 위 7번 절)
+- 에이전트: `.venv/Scripts/python ask.py "질문"` (`.env` 설정과, 먼저 위 한 줄 재현이 필요합니다. 위 7번 절)
 
 ## 폴더
 
@@ -247,7 +252,7 @@ data/manifest.json      원자료 파일별 체크섬
 
 ## 출처
 
-- UN Comtrade Database, United Nations Statistics Division. https://comtradeplus.un.org
-- 이용 조건: [License Agreement](https://comtrade.un.org/licenseagreement.html), [Policy on Comtrade Data Use](https://uncomtrade.org/docs/policy-on-use-and-re-dissemination/), [Re-dissemination of data](https://uncomtrade.org/docs/re-dissemination-of-data/)
-- 원/달러 환율 `EXKOUS`: Board of Governors of the Federal Reserve System (G.5, 일별 값의 월평균), FRED 경유.
-- 브렌트유 `MCOILBRENTEU`: U.S. Energy Information Administration, FRED 경유.
+- UN Comtrade Database, United Nations Statistics Division. https://comtradeplus.un.org (2026-11-01 받음)
+- 이용 조건: [License Agreement](https://comtrade.un.org/licenseagreement.html), [Policy on Comtrade Data Use](https://uncomtrade.org/docs/policy-on-use-and-re-dissemination/), [Re-dissemination of data](https://uncomtrade.org/docs/re-dissemination-of-data/), [Read Me First (Disclaimer)](https://uncomtrade.org/docs/read-me-first-disclaimer/)
+- 원/달러 환율 `EXKOUS`: Board of Governors of the Federal Reserve System (G.5, 일별 값의 월평균), FRED 경유 (2026-11-01 받음).
+- 브렌트유 `MCOILBRENTEU`: U.S. Energy Information Administration, FRED 경유 (2026-11-01 받음).

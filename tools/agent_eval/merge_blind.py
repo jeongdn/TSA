@@ -4,6 +4,7 @@
 - 검토 결과: review_blind_workflow.js가 돌려준 JSON (byId: 묶음 id -> 두 관점의 판정).
 - blind_key.json: make_blind.py가 쓴 표 (묶음 id -> 실행 이름·질문 id). 이것으로 판정을 원래 실행에 되돌린다.
 - 판정 규칙은 merge_review.py와 같다. 원래 뜻 검토와 통과 판정이 같은 질문 수도 찍는다.
+- 검토 요약(summary_ko)도 평가 파일에 들어간다. 도구 결과의 숫자가 들어갈 수 있으니 커밋 전에 확인한다.
 """
 import json
 import sys

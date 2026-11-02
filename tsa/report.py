@@ -14,7 +14,7 @@ from . import config  # noqa: E402
 
 OUT = config.OUT_DIR
 FIG = OUT / "figures"
-# 색: dataviz 기본 범주 팔레트 1~4번 (검사기 통과). 청록·노랑은 배경 대비가 낮아 선 끝에 직접 라벨을 붙인다
+# 색: 범주형 4색 (Claude Code의 dataviz 스킬 기본 팔레트 1~4번, 그 스킬의 색 검사를 통과). 청록·노랑은 배경 대비가 낮아 선 끝에 직접 라벨을 붙인다
 COLORS = {"LGBM": "#2a78d6", "ETS": "#eb6834", "SNaive": "#1baf7a", "Ensemble": "#eda100"}
 IV_COLORS = {"raw": "#2a78d6", "static": "#eb6834", "online": "#1baf7a"}
 INK, INK2, GRID, SURFACE = "#0b0b0b", "#52514e", "#e4e3df", "#fcfcfb"
@@ -199,8 +199,11 @@ def results_md(R, V, F, wins=None):
     L = []
     w = L.append
     w("# RESULTS\n")
-    w("> 이 파일은 `python run_all.py --stage report`가 `outputs/results.json`, `outputs/val_summary.json`, "
-      "`frozen.json`에서 자동으로 만든다. 손으로 고친 숫자는 없다.\n")
+    w("> 이 파일은 `python run_all.py --stage report`가 `outputs/`의 결과 파일(results.json, val_summary.json, "
+      "mint_results.json, mint_val.json, report.py의 AGENT_RUNS에 적은 agent_eval 파일 11개)과 `frozen.json`, "
+      "`frozen_mint.json`에서 자동으로 만든다. 동결 커밋은 git 태그(`freeze`, `freeze-mint`)에서 읽어서, 태그가 "
+      "없으면 `n/a`로 나온다. 4절의 기준 시점별 승패 문단은 커밋하지 않은 `outputs/test_forecasts.csv.gz`가 "
+      "있어야 들어간다. 손으로 고친 숫자는 없다.\n")
     w(f"- 데이터: UN Comtrade, 한국 수출 HS 390330(ABS)·390740(PC), {F['data']['start']} ~ {F['data']['end']}, "
       f"시리즈 {len(F['series'])}개 (제품별 상위 8개국 + 기타)")
     w(f"- 검증 기준 시점 {F['windows']['val_origins'][0]} ~ {F['windows']['val_origins'][1]} (12개), "
@@ -428,6 +431,13 @@ def mint_md(M, MV, FM):
     return "\n".join(L) + "\n"
 
 
+def _cell(s):
+    """표 칸에 넣는 글. GitHub에서는 '|'가 칸을 나누고, 한 칸에 띄어 쓰지 않은 '~'가 두 개면 그 사이가
+    취소선이 되어서 둘 다 이스케이프한다. 백틱 코드 안에서는 이스케이프 문자가 그대로 보이지만, 지금 이 칸들에는
+    코드가 없다."""
+    return str(s).replace("|", "\\|").replace("~", "\\~")
+
+
 # 에이전트 평가 실행. 있는 파일만 11절에 싣고, 질문별 상세 표는 뜻 검토를 한 실행만 싣는다
 AGENT_RUNS = [   # (결과 파일, 짧은 이름, 설명, 질문별 상세 표를 실을지)
     ("agent_eval.json", "개발 1", "처음 에이전트, 개발용 질문 10개 (실행 전에 고정)", True),
@@ -437,7 +447,7 @@ AGENT_RUNS = [   # (결과 파일, 짧은 이름, 설명, 질문별 상세 표�
     ("agent_eval_test_v1.json", "테스트·처음", "처음 에이전트(개발 1과 같은 코드, 질문 파일만 바꿔 별도 worktree에서), 테스트 "
                                               "질문 10개 (동결본 결과를 본 뒤 비교용으로 정해 돌림)", True),
     ("agent_eval_test.json", "테스트·동결본", "2차 동결본(태그 `freeze-agent`), 테스트 질문 10개 (독립 에이전트가 작성, 고친 "
-                                         "사람은 실행 전까지 보지 않음, 한 번 실행)", True),
+                                         "세션은 실행 전까지 보지 않음, 기록일 뿐 확인할 장치는 없음, 한 번 실행)", True),
     ("agent_eval_v3dev4.json", "3차·개발용", "3차 동결본, 개발용 질문 10개 (3차를 고칠 때 본 질문이라 낙관적)", False),
     ("agent_eval_v3t1d.json", "3차·테스트", "3차 동결본, 1차 테스트 질문 10개 (3차를 고칠 때 본 질문이라 낙관적)", False),
     ("agent_eval_t2_v1.json", "테스트2·처음", "처음 에이전트, 새 테스트 질문 10개 (테스트2, 독립 에이전트가 작성, 한 번)", True),
@@ -591,15 +601,15 @@ def agent_md(runs):
               "|---|---|---|---|---|" + ("---|" if red else "") + ("---|" if sr else "") + ("---|" if sb else "")]
         for q in A["questions"]:
             caught = ", ".join(q["unsupported_first"] + q.get("issues_first", [])) or "-"
-            row = (f"| {q['question']} | {', '.join(q['called_tools']) or '-'} | {'통과' if q['first_try_ok'] else '실패'} | "
-                   f"{'통과' if q['final_ok'] else '실패'} | {caught} |" + (f" {q['redacted']} |" if red else ""))
+            row = (f"| {_cell(q['question'])} | {', '.join(q['called_tools']) or '-'} | {'통과' if q['first_try_ok'] else '실패'} | "
+                   f"{'통과' if q['final_ok'] else '실패'} | {_cell(caught)} |" + (f" {q['redacted']} |" if red else ""))
             for review in (sr, sb):
                 if review:
                     v = review["by_id"].get(q["id"], {})
-                    row += f" {'맞음' if v.get('faithful') else '문제: ' + v.get('summary_ko', '-')} |"
+                    row += f" {'맞음' if v.get('faithful') else '문제: ' + _cell(v.get('summary_ko', '-'))} |"
             L.append(row)
     L.append("\n숫자 검사는 '답변의 숫자가 도구 결과 어딘가에 있는가'만 본다. 맞는 항목과 짝지었는지까지는 확인하지 않아서 "
-             "뜻 검토를 따로 했다. 검토자도 AI라 답변 전문과 판정 전문을 outputs/cache/에 남겼다 (커밋하지 않음, 이 PC에만 "
+             "뜻 검토를 따로 했다. 검토자도 AI라 답변 전문과 판정 전문을 outputs/cache/에 남겼다 (커밋하지 않음, 작성자 컴퓨터에만 "
              "있음). 검토 지시문과 집계 스크립트는 tools/agent_eval/에 있다.")
     return "\n".join(L) + "\n"
 

@@ -3,6 +3,8 @@
 사용: python merge_review.py <review.json> <프로젝트 폴더> [평가 파일 이름 (기본 agent_eval.json)]
 판정: 통과 = 두 검토자 모두 '모든 주장이 도구 결과와 맞음' + '질문에 답했는지' 관점 검토자가 답했다고 봄.
 가린 재검토(merge_blind.py)도 같은 판정 함수(verdict, summarize)를 쓴다.
+검토 요약(summary_ko)은 커밋하는 평가 파일에 들어간다. 요약에는 도구 결과의 숫자(작년 같은 달 대비 증감률 등)가
+들어갈 수 있으니 커밋 전에 확인한다.
 """
 import json
 import sys

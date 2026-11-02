@@ -2,7 +2,7 @@
 
   --stage val      검증 단계만 (frozen.json이 없으면 만들고, 있으면 다시 고른 결과가 같은지 확인하고
                    다르면 멈춘다. frozen.json과 data/ 지문은 덮어쓰지 않지만 outputs/val_* 파일은 다시 쓴다)
-  --stage final    테스트 단계만 (frozen.json과, 같은 PC에서 먼저 돌린 val 단계의 outputs/val_* 파일 필요)
+  --stage final    테스트 단계만 (frozen.json과, 같은 컴퓨터에서 먼저 돌린 val 단계의 outputs/val_* 파일 필요)
   --stage mint     7번 계층 조정 (val·final 단계의 예측 파일 필요). frozen_mint.json이 없으면 검증 구간에서 방법을
                    정해 쓰고 멈춘다. 있으면 다시 정한 결과가 같은지 확인한 뒤 테스트 구간을 채점한다
   --stage forecast 7번 마지막 자료 월 기준 앞으로 6개월 예측 (frozen.json, frozen_mint.json 필요)

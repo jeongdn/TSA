@@ -4,7 +4,7 @@
 - 3차: 보호 장치가 답을 바꾸면 기록에는 숫자 검사 통과로 남는다. 그래서 모델이 고른 문장(final_answer의 id)을
   도구 기록에서 다시 만들어, 보호 장치 전의 답으로 검사한다.
 - 처음 에이전트: 그때의 숫자 검사에는 기간 검사가 없었다. 보여 준 답을 지금의 검사로 다시 본다.
-답변 기록(outputs/cache/agent_answers_*.json)은 커밋하지 않으므로 이 PC에서만 돈다.
+답변 기록(outputs/cache/agent_answers_*.json)은 커밋하지 않으므로 작성자 컴퓨터에서만 돈다.
 """
 import json
 import sys

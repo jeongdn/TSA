@@ -46,9 +46,11 @@ def load(refresh=False):
 
 def content_hash(D):
     """원자료의 '값'만으로 만든 지문. 응답에 들어 있는 서버 처리 시간이나 FRED의 새 달처럼
-    값과 무관한 차이에는 바뀌지 않아서, 새로 받은 자료가 동결 때와 같은 값인지 확인할 수 있다."""
+    값과 무관한 차이에는 바뀌지 않아서, 새로 받은 자료가 동결 때와 같은 값인지 확인할 수 있다.
+    줄바꿈은 동결 때(Windows)와 같은 CRLF로 고정한다. 고정하지 않으면 OS마다 지문이 달라진다."""
     df = D.df.sort_values(["period", "hs", "partner"])[["period", "hs", "partner", "kg", "usd"]]
-    text = df.astype(str).to_csv(index=False) + D.ext.loc[:config.END].astype(str).to_csv()
+    text = (df.astype(str).to_csv(index=False, lineterminator="\r\n")
+            + D.ext.loc[:config.END].astype(str).to_csv(lineterminator="\r\n"))
     return hashlib.sha256(text.encode()).hexdigest()
 
 

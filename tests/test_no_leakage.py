@@ -82,7 +82,7 @@ def test_no_leakage():
 
     # 5) 계층 조정: W의 재료(검증 구간 오차)는 테스트 구간 값을 바꿔도 같아야 한다
     val_path = config.OUT_DIR / "val_forecasts.csv.gz"
-    if val_path.exists():          # val 단계를 먼저 돌린 PC에서만 확인할 수 있다
+    if val_path.exists():          # val 단계를 먼저 돌린 컴퓨터에서만 확인할 수 있다
         Yc, _ = poisoned(D, D.months.get_loc(config.CUTOFF))
         errs = []
         for d in (D, SimpleNamespace(**{**vars(D), "Y": Yc})):

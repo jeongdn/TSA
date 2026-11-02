@@ -97,7 +97,8 @@ def run_eval(llm, questions, name, ask=qa_agent.ask):
          "questions": rows}
     (config.OUT_DIR / f"agent_eval{suffix}.json").write_text(json.dumps(A, ensure_ascii=False, indent=2),
                                                              encoding="utf-8")
-    # 답변 전문에는 실제 물량이 들어갈 수 있어 커밋하지 않는 cache/에 둔다
+    # 답변 전문에는 실제 물량이 들어갈 수 있어 커밋하지 않는 cache/에 둔다. 위 파일의 issues_*에도 도구 결과의
+    # 숫자(작년 같은 달 대비 증감률 등)가 들어갈 수 있다
     config.CACHE_DIR.mkdir(parents=True, exist_ok=True)
     (config.CACHE_DIR / f"agent_answers{suffix}.json").write_text(json.dumps(full, ensure_ascii=False, indent=2),
                                                                   encoding="utf-8")

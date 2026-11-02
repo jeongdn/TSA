@@ -208,7 +208,8 @@ def test_load_env():
     try:
         with tempfile.TemporaryDirectory() as d:
             p = pathlib.Path(d) / ".env"
-            p.write_text("﻿TSA_T_A=first\nTSA_T_A=second\n# TSA_T_B=commented\nTSA_T_C=\"quoted\"\n"
+            # 맨 앞의 \ufeff는 메모장이 파일 앞에 붙이는 BOM이다
+            p.write_text("\ufeffTSA_T_A=first\nTSA_T_A=second\n# TSA_T_B=commented\nTSA_T_C=\"quoted\"\n"
                          "TSA_T_D=from-file\n", encoding="utf-8")
             qa_agent.load_env(p)
         assert os.environ["TSA_T_A"] == "second" and "TSA_T_B" not in os.environ
