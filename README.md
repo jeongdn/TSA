@@ -261,4 +261,4 @@ data/manifest.json      원자료 파일별 체크섬
 
 ## 라이선스
 
-이 저장소의 코드는 [MIT 라이선스](LICENSE)를 따릅니다. UN Comtrade·FRED에서 받은 자료와 그것으로 계산한 값은 MIT 라이선스 대상이 아니고, 각 출처의 이용 조건을 따릅니다 (위 [이용 조건](#이용-조건-un-comtrade)과 [출처](#출처)). 이런 값은 주로 `outputs/`의 결과 파일과 그림, `frozen.json`·`frozen_mint.json`, 문서에 들어 있습니다.
+이 저장소의 코드와 문서는 [MIT 라이선스](LICENSE)를 따릅니다. UN Comtrade·FRED에서 받은 자료와 그것으로 계산한 값은 MIT 라이선스 대상이 아니고, 각 출처의 이용 조건을 따릅니다 (위 [이용 조건](#이용-조건-un-comtrade)과 [출처](#출처)). 이런 값은 주로 `outputs/`의 결과 파일과 그림, `frozen.json`·`frozen_mint.json`, 문서에 들어 있습니다.
